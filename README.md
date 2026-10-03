@@ -4,14 +4,25 @@ Offline command line drum, bass and lead synthesis with sequencing, mixing, effe
 
 ## Install
 
-Requires Python 3.10+.
+Requires Python 3.10+. Follow the [Linux and Windows installation guide](docs/installation.md) for prerequisites, isolated environments, playback, troubleshooting and uninstall commands.
+
+Linux / macOS, from the source directory:
 
 ```sh
-python -m pip install .
-python -m pip install '.[playback]'
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install ".[playback]"
 ```
 
-The second command adds optional playback support. Renderers work without audio hardware. Bash and PowerShell wrappers in `scripts/` delegate to the same engine; `GROOVESCRIPTING_PYTHON` selects its interpreter.
+Windows PowerShell, from the source directory (activation is optional):
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install ".[playback]"
+.\.venv\Scripts\groovseq.exe --help
+```
+
+Install `.` instead of `.[playback]` for offline rendering alone.
 
 ## First groove
 
@@ -44,6 +55,10 @@ groovplay --diagnose --log-file playback.jsonl --log-level debug --log-format js
 ```
 
 Logs are opt in. Include the command, project, log, OS and Python version in bug reports. Fix the seed and sample rate for reproducible comparisons. Run `groovplay --devices` for playback target discovery. System volume and device access depend on OS support and local audio policy; hardware behavior requires local verification.
+
+## More groove formulas
+
+The [groove cookbook](examples/GROOVE_COOKBOOK.md) includes ten complete projects: house, techno, drum and bass, half time, hip hop, UK garage, hard trance, electro, dub and 7/8. Each recipe shows its drum and note patterns, tempo, swing and render commands. Editable JSON files are in `examples/grooves/`; the same recipes appear on the Pages site.
 
 ## Circuit Drift Labs
 
