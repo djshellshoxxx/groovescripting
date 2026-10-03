@@ -167,6 +167,7 @@ effects = """<section id="effects"><h2>Effect object reference</h2><p>Pass each 
     + body
     + "".join(parts)
     + effects
-    + '</main><p id="copy-status" role="status" class="toast"></p></body></html>'
+    + '</main><p id="copy-status" role="status" class="toast"></p></body></html>',
+    encoding="utf-8",
 )
 print("Generated complete reference for eight tools")
