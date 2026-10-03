@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "runner": "python examples/smoke.py --output-dir example-output",
+  "projects": [
+    "first-groove.json",
+    "arrangement.json"
+  ],
+  "outputs": {
+    "kick.wav": "four-on-the-floor drum renderer",
+    "bass.wav": "bass note pattern",
+    "lead.wav": "lead note pattern",
+    "groove.wav": "normalized three-track mix",
+    "project.wav": "version 1 project and aligned stems",
+    "arrangement.wav": "sectioned arrangement",
+    "quieter.wav": "gain effect, db=-2",
+    "debug.wav": "render with text debug log",
+    "single-hit.wav": "single snare onset within a bar",
+    "glide.wav": "bass glide with tied note and accent",
+    "arp.wav": "normalized chord arpeggio",
+    "delay-loop.wav": "wrapped delay tail"
+  },
+  "diagnostics": [
+    "render.log",
+    "playback.jsonl"
+  ],
+  "hardware_commands": [
+    "groovplay --devices",
+    "groovplay --test-tone --device 0",
+    "groovplay groove.wav --repeat 2"
+  ]
+}

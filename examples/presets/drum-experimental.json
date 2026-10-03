@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "instrument": "drum",
+  "name": "drum-experimental",
+  "params": {
+    "drum_patterns": {
+      "tom": "X..x....x..X....",
+      "rim": "..x..x...x..x...",
+      "clap": ".......x.......x"
+    },
+    "seed": 12,
+    "pitch": 240
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "instrument": "bass",
+  "name": "bass-aggressive",
+  "params": {
+    "waveform": "pulse",
+    "pulse_width": 0.3,
+    "saturation": 2.0,
+    "sub_mix": 0.35,
+    "cutoff": 1500.0,
+    "pattern": "C2 C2 . Eb2 G1 . Bb1 C2"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "instrument": "drum",
+  "name": "drum-breakbeat",
+  "params": {
+    "drum_patterns": {
+      "kick": "X.....x...x.....",
+      "snare": "....X.......X...",
+      "closed_hat": "x.xXx.x.x.xXx.x."
+    },
+    "swing": 0.15
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "instrument": "bass",
+  "name": "bass-sub",
+  "params": {
+    "waveform": "sine",
+    "cutoff": 500.0,
+    "sub_mix": 0.25,
+    "pattern": "C2 . C2 . G1 . C2 ."
+  }
+}

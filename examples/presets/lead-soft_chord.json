@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "instrument": "lead",
+  "name": "lead-soft_chord",
+  "params": {
+    "waveform": "sine",
+    "attack": 0.04,
+    "release": 0.3,
+    "pattern": "C4+E4+G4:1 . . . F4+A4+C5:1 . . ."
+  }
+}

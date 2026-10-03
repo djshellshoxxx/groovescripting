@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "instrument": "drum",
+  "name": "drum-dance",
+  "params": {
+    "drum_patterns": {
+      "kick": "X...X...X...X...",
+      "clap": "....x.......x...",
+      "open_hat": "..x...x...x...x."
+    },
+    "saturation": 0.3
+  }
+}

@@ -1,0 +1,7 @@
+include LICENSE README.md pyproject.toml
+recursive-include spec *.md
+recursive-include tasks *.md
+recursive-include examples *.json *.py *.md
+recursive-include scripts *.sh *.ps1 *.py
+recursive-include docs *.html *.css *.js *.svg *.md *.wav
+prune docs/downloads

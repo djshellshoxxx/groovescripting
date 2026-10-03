@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "instrument": "bass",
+  "name": "bass-acid",
+  "params": {
+    "waveform": "saw",
+    "resonance": 0.65,
+    "filter_amount": 2.0,
+    "sustain": 0.3,
+    "glide": 0.06,
+    "legato": true,
+    "pattern": "C2:0.5:1 ~ G2! . Bb1 . C2 ."
+  }
+}

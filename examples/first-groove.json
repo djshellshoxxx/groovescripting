@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "bpm": 140,
+  "bars": 2,
+  "beats": 4,
+  "subdivision": 4,
+  "swing": 0.12,
+  "sample_rate": 44100,
+  "channels": 2,
+  "seed": 42,
+  "tracks": [
+    {
+      "name": "Drums",
+      "instrument": "drum",
+      "pattern": "x...x...x...x...",
+      "params": {
+        "voice": "kick",
+        "drum_patterns": {
+          "kick": "x...x...x...x...",
+          "snare": "....x.......x...",
+          "closed_hat": "x.x.x.x.x.x.x.x."
+        }
+      },
+      "gain": 0.55,
+      "pan": 0
+    },
+    {
+      "name": "Bass",
+      "instrument": "bass",
+      "pattern": "C2 . . . C2 . G1 . C2 . . . Bb1 . G1 .",
+      "params": {
+        "waveform": "saw",
+        "cutoff": 600,
+        "release": 0.08
+      },
+      "gain": 0.3,
+      "pan": 0
+    },
+    {
+      "name": "Lead",
+      "instrument": "lead",
+      "pattern": "C4 . Eb4 . G4 . Bb4 . G4 . Eb4 . C4 . . .",
+      "params": {
+        "waveform": "triangle",
+        "cutoff": 2200,
+        "release": 0.15
+      },
+      "gain": 0.15,
+      "pan": 0.25
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "instrument": "drum",
+  "name": "drum-electronic",
+  "params": {
+    "drum_patterns": {
+      "kick": "x...x...x...x...",
+      "snare": "....x.......x...",
+      "closed_hat": "x.x.x.x.x.x.x.x."
+    }
+  }
+}

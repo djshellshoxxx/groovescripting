@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "instrument": "bass",
+  "name": "bass-plucked",
+  "params": {
+    "waveform": "triangle",
+    "decay": 0.08,
+    "sustain": 0.15,
+    "cutoff": 1600.0,
+    "pattern": "C2 . Eb2 G2 . Bb1 C2 ."
+  }
+}
