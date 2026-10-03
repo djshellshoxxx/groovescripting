@@ -7,4 +7,4 @@
 - [x] Clean installation and examples
 - [x] Website assets and browser checks
 - [x] Final requirements traceability audit
-- [ ] Repository publication and CI checks
+- [x] Repository publication and CI checks

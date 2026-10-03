@@ -79,18 +79,18 @@ Source: the complete implementation request attached on 2026-10-03 and the addit
 | G04 | Architecture/limits/troubleshooting/license/repo and verified CDL links | Site and specs/research | Link verification and browser check pending |
 | G05 | Favicon/responsiveness/keyboard/mobile readable; all controls work | SVG, CSS focus/skip link, JS copy/search | Real browser checks pending |
 | G06 | Optional browser playground synchronized controls/export with honest parity | `spec/website.md` | Optional omitted; no nonfunctional placeholder |
-| G07 | Pages established/suitable Actions deployment; repo-subpath asset paths | `.github/workflows/pages.yml` and relative local links | Local links/build passed; remote deployment external |
-| T01 | CLI parsing/ranges/incompatibilities/exit codes; patterns and invalid notes | CLI validation and music parser tests | 85-test full run passed plus5 dispatch regressions; final full-suite count pending report |
-| T02 | Timing/frame counts/alignment; every instrument/helper; seed determinism | Synth/helpers/devices suites | 85-test full run passed plus5 dispatch regressions; latest full-suite result recorded in verification report when available |
-| T03 | Audio finite/nonempty/formatted; frequency/envelope tolerances | Synth and IO numerical assertions | 85-test full run passed plus5 dispatch regressions; latest full-suite result recorded in verification report when available |
-| T04 | Polyphony/stealing/glide/accents/choking | `test_synth.py` | 85-test full run passed plus5 dispatch regressions; latest full-suite result recorded in verification report when available |
-| T05 | Effects stability/tails/clipping/limiting; preset/project roundtrip/schema | Helpers and CLI suites | 85-test full run passed plus5 dispatch regressions; latest full-suite result recorded in verification report when available |
-| T06 | Mix offset/channel/resampling; overwrite/spaced paths; interruption/dependency errors | Helpers/devices/CLI suites | 85-test full run passed plus5 dispatch regressions; latest full-suite result recorded in verification report when available |
-| T07 | Bash/PS launchers when runtime available; clean installation; every doc example | Smoke runner, CI, launcher tests | Local/remote exact outcomes pending; unavailable runtimes disclosed |
+| G07 | Pages established/suitable Actions deployment; repo-subpath asset paths | `.github/workflows/pages.yml` and relative local links | Local links/build passed; live Pages deployment succeeded |
+| T01 | CLI parsing/ranges/incompatibilities/exit codes; patterns and invalid notes | CLI validation and music parser tests | 89-test final full run passed; see verification report |
+| T02 | Timing/frame counts/alignment; every instrument/helper; seed determinism | Synth/helpers/devices suites | 89-test final full run passed; see verification report |
+| T03 | Audio finite/nonempty/formatted; frequency/envelope tolerances | Synth and IO numerical assertions | 89-test final full run passed; see verification report |
+| T04 | Polyphony/stealing/glide/accents/choking | `test_synth.py` | 89-test final full run passed; see verification report |
+| T05 | Effects stability/tails/clipping/limiting; preset/project roundtrip/schema | Helpers and CLI suites | 89-test final full run passed; see verification report |
+| T06 | Mix offset/channel/resampling; overwrite/spaced paths; interruption/dependency errors | Helpers/devices/CLI suites | 89-test final full run passed; see verification report |
+| T07 | Bash/PS launchers when runtime available; clean installation; every doc example | Smoke runner, CI, launcher tests | Bash local and PowerShell Windows CI passed; see verification report |
 | T08 | Real behavioral assertions, not file-existence-only; mocks and real devices when available | Behavioral numerical suites/device mocks | Tests inspected; physical host unavailable |
-| T09 | Lint/tests/package/site checks; OS CI; inspect/fix/rerun actual failures | CI workflow and final verification report | Remote CI results external; local checks pending |
-| T10 | Actual browser links/downloads/audio/copy/responsive/playground checks | Website test workflow | Real browser check pending; playground omitted |
-| C01 | Nine stages through audit/commit/push/publication, no premature completion | Work record and verification report | Final remote evidence pending |
+| T09 | Lint/tests/package/site checks; OS CI; inspect/fix/rerun actual failures | CI workflow and final verification report | Local89 tests passed; six-platform test/build results in verification report |
+| T10 | Actual browser links/downloads/audio/copy/responsive/playground checks | Website test workflow | Live copy/search/audio/source download passed; desktop checked; mobile viewport unavailable; playground omitted |
+| C01 | Nine stages through audit/commit/push/publication, no premature completion | Work record and verification report | Repository published and live Pages checked; see verification report |
 | C02 | Final report tools/install/smoke/test results/performed/unperformed platform checks/limits/blockers/verified links/commit/release | `docs/verification.md` | Must be generated from actual evidence |
 | C03 | Concise final response built/repo/site/download/install/groove/tests/limits; no unsupported complete/published claims | Final response | Pending final handoff |
 | LOG01 | Additional request: opt-in troubleshooting log flag throughout project | `diagnostics.py`, all-tool `--log-file/--log-level/--log-format`; `spec/cli.md` | CLI text/JSON logging, append, exception/stdout/lifecycle regressions included in passing local suites |
