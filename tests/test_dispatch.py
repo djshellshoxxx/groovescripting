@@ -1,6 +1,8 @@
 """Device dispatch and arrangement edge behavior not covered by subprocess renders."""
 
+import io
 import json
+import sys
 
 import numpy as np
 import pytest
@@ -139,3 +141,14 @@ def test_testtone_stereo_and_diagnostic_channels(monkeypatch):
     monkeypatch.setattr(devices, "_backend", lambda: Backend())
     assert devices.diagnose(8000, channels=1)["supported"]
     assert seen[-1]["channels"] == 1
+
+
+def test_json_status_survives_windows_legacy_console(monkeypatch):
+    raw = io.BytesIO()
+    stream = io.TextIOWrapper(raw, encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", stream)
+    cli.emit({"path": "groove 音 ü.wav"}, as_json=True)
+    stream.flush()
+    encoded = raw.getvalue()
+    assert encoded.isascii()
+    assert json.loads(encoded)["path"] == "groove 音 ü.wav"

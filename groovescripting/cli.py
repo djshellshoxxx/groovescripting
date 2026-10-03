@@ -233,11 +233,11 @@ def json_data(path):
 
 def emit(item, as_json=False):
     if as_json:
-        print(json.dumps(item, ensure_ascii=False, allow_nan=False))
+        print(json.dumps(item, ensure_ascii=True, allow_nan=False))
     elif isinstance(item, list):
         print("\n".join(map(str, item)))
     else:
-        print(json.dumps(item, indent=2, ensure_ascii=False, allow_nan=False))
+        print(json.dumps(item, indent=2, ensure_ascii=True, allow_nan=False))
 
 
 def early_logs(argv):
@@ -567,7 +567,7 @@ def run(tool, argv=None):
         logger, handler = early_logs(argv)
         logger.info("Starting %s", tool)
         args = parser(tool).parse_args(argv)
-        logger.debug("Parsed arguments: %s",vars(args))
+        logger.debug("Parsed arguments: %s", vars(args))
         execute(tool, args, logger)
         logger.info("Completed %s elapsed_seconds=%.6f", tool, time.perf_counter() - started)
         return 0
