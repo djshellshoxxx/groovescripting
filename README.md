@@ -1,6 +1,6 @@
 # GrooveScripting
 
-Offline command line drum, bass and lead synthesis with sequencing, mixing, effects, playback and WAV inspection. Built for reproducible loops and shell based arrangements.
+Offline command line drum, bass and lead synthesis with sequencing, deterministic variation, automation, MIDI interchange, mixing, effects, playback and WAV inspection. Built for reproducible loops and shell based arrangements.
 
 ## Install
 
@@ -44,6 +44,9 @@ Use `examples/arrangement.json` for a section based arrangement. Protect existin
 | `groovfx` | Ordered audio effects |
 | `groovplay` | Playback, device listing and diagnostics |
 | `groovinfo` | WAV metadata and signal statistics |
+| `groovmidi` | MIDI project import/export |
+
+Use `--variation` and `--density` on synth commands for seeded pattern mutation; drums also support `--ghost-notes` and `--fill-every`. Project tracks support gain, pan, cutoff and saturation automation lanes. `groovmidi import` converts melodic MIDI into a project and `groovmidi export` writes project arrangements as Standard MIDI Files.
 
 Each command exposes `--help`. Website source and detailed command documentation are in `docs/`; engineering specifications are in `spec/`. Every command has CLI help; `docs/reference.html` contains the generated full flag defaults and ranges.
 
