@@ -48,6 +48,27 @@ Use `examples/arrangement.json` for a section based arrangement. Protect existin
 
 Use `--variation` and `--density` on synth commands for seeded pattern mutation; drums also support `--ghost-notes` and `--fill-every`. Project tracks support gain, pan, cutoff and saturation automation lanes. `groovmidi import` converts melodic MIDI into a project and `groovmidi export` writes project arrangements as Standard MIDI Files.
 
+```sh
+groovdrm --preset breakbeat --bars 4 --variation 0.3 --ghost-notes 0.08 --fill-every 4 -o varied-break.wav
+groovmidi import phrase.mid --output phrase.json --instrument lead
+groovmidi export examples/arrangement.json --output arrangement.mid
+```
+
+Automation lanes live on a project track and use absolute arrangement beats:
+
+```json
+"automation": [
+  {
+    "param": "cutoff",
+    "curve": "linear",
+    "points": [
+      {"beat": 0, "value": 300},
+      {"beat": 16, "value": 6000}
+    ]
+  }
+]
+```
+
 Each command exposes `--help`. Website source and detailed command documentation are in `docs/`; engineering specifications are in `spec/`. Every command has CLI help; `docs/reference.html` contains the generated full flag defaults and ranges.
 
 ## Troubleshooting logs
