@@ -1,8 +1,7 @@
 import json
 
+import mido
 import pytest
-
-mido = pytest.importorskip("mido")
 
 from groovescripting import midi, projects
 
