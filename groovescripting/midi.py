@@ -10,7 +10,7 @@ from pathlib import Path
 
 import mido
 
-from . import __version__, presets
+from . import __version__, diagnostics, presets
 from .music import note_value
 from .projects import load as load_project
 from .projects import save as save_project
@@ -367,6 +367,9 @@ def export_file(project, path, overwrite=False, ticks_per_beat=480):
 def parser():
     p = argparse.ArgumentParser(prog="groovmidi", description="GrooveScripting MIDI file interchange")
     p.add_argument("--version", action="version", version=__version__)
+    p.add_argument("--log-file", metavar="PATH", help="append troubleshooting logs to a UTF-8 file")
+    p.add_argument("--log-level", choices=["debug", "info", "warning", "error"], default="info")
+    p.add_argument("--log-format", choices=["text", "json"], default="text")
     sub = p.add_subparsers(dest="action", required=True)
 
     imp = sub.add_parser("import", help="convert MIDI to a GrooveScripting project")
@@ -386,7 +389,12 @@ def parser():
 
 def cli(argv=None):
     args = parser().parse_args(argv)
+    logger = handler = None
     try:
+        if not args.log_file and (args.log_level != "info" or args.log_format != "text"):
+            raise ValueError("--log-level and --log-format require --log-file")
+        logger, handler = diagnostics.configure(args.log_file, args.log_level, args.log_format)
+        logger.info("Starting groovmidi %s", args.action)
         if args.action == "import":
             project = import_file(
                 args.input,
@@ -395,16 +403,24 @@ def cli(argv=None):
                 quantize=not args.no_quantize,
             )
             save_project(args.output, project, overwrite=args.overwrite)
-            return 0
-        project = load_project(args.input)
-        export_file(project, args.output, overwrite=args.overwrite)
+        else:
+            project = load_project(args.input)
+            export_file(project, args.output, overwrite=args.overwrite)
+        logger.info("Completed groovmidi %s", args.action)
         return 0
     except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
+        if logger:
+            logger.exception("Invalid input: %s", error)
         print(f"groovmidi: {error}", file=sys.stderr)
         return 2
     except (OSError, RuntimeError, ImportError) as error:
+        if logger:
+            logger.exception("Operation failed: %s", error)
         print(f"groovmidi: {error}", file=sys.stderr)
         return 1
+    finally:
+        if logger and handler:
+            diagnostics.close(logger, handler)
 
 
 def main():
