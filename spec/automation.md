@@ -30,7 +30,7 @@ Supported parameters in version 1:
 
 Supported curves: `linear` and `step`.
 
-Points use absolute arrangement beats, not section-local beats. This means an automation lane continues across repeated or different sections. Points must be ordered strictly by beat and contain finite beat/value numbers. Beat must be >= 0. A lane requires at least one point. Duplicate params on one track are rejected.
+Points use absolute arrangement beats, not section-local beats. This means an automation lane continues across repeated or different sections. Track offsets shift the automation evaluation clock with the audio, including negative pre-roll that is later clipped at the section boundary. Points must be ordered strictly by beat and contain finite beat/value numbers. Beat must be >= 0. A lane requires at least one point. Duplicate params on one track are rejected.
 
 Section track overrides may replace the complete `automation` array.
 
