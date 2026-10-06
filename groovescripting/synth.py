@@ -7,8 +7,8 @@ import numpy as np
 from scipy.signal import lfilter
 
 from . import presets
-from .music import beat_frame, frequency, note_value, parse_pattern
 from . import variation as event_variation
+from .music import beat_frame, frequency, note_value, parse_pattern
 
 DRUMS = ("kick", "snare", "closed_hat", "open_hat", "clap", "tom", "rim")
 
