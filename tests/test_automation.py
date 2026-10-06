@@ -107,3 +107,31 @@ def test_project_automation_continues_across_repeated_sections():
 def test_automation_validation_rejects_bad_lanes(lanes):
     with pytest.raises(ValueError):
         automation.validate(lanes)
+
+
+def test_project_automation_accounts_for_track_offset():
+    def render(kind, params):
+        return np.ones((4000, 1))
+
+    project = {
+        "version": 1,
+        "bpm": 120,
+        "beats": 1,
+        "bars": 1,
+        "sample_rate": 8000,
+        "channels": 1,
+        "tracks": [
+            {
+                "name": "A",
+                "instrument": "bass",
+                "offset": 0.5,
+                "automation": [
+                    lane("gain", [{"beat": 0, "value": 0}, {"beat": 1, "value": 1}])
+                ],
+            }
+        ],
+    }
+    out, _, _ = projects.render_project(project, render)
+    assert not out[:2000].any()
+    assert out[2000, 0] == pytest.approx(0.5)
+    assert out[-1, 0] > 0.99
