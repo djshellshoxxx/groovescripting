@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from .validation import validate_instrument_params
+from .validation import ALLOWED, validate_instrument_params
 
 DEFAULTS = dict(
     bpm=120,
@@ -167,9 +167,9 @@ def load(instrument, value):
 
 
 def resolve(instrument, preset=None, params=None):
-    result = dict(DEFAULTS)
+    result = {key: value for key, value in DEFAULTS.items() if key in ALLOWED[instrument]}
     if instrument != "drum":
-        result.update(SOUND_DEFAULTS)
+        result.update({key: value for key, value in SOUND_DEFAULTS.items() if key in ALLOWED[instrument]})
     if preset:
         result.update(load(instrument, preset)["params"])
     result.update(params or {})
