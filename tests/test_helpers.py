@@ -92,12 +92,12 @@ def test_project_exact_clock_section_variation_and_overrides(tmp_path):
         seed=2,
         humanize=0.01,
         velocity_humanize=0.1,
-        tracks=[dict(name="A", instrument="bass", preset="sub", params={"cutoff": 2})],
-        sections=[dict(bars=1, repeat=2, variation=3, tracks={"A": {"params": {"cutoff": 3}}})],
+        tracks=[dict(name="A", instrument="bass", preset="sub", params={"cutoff": 200})],
+        sections=[dict(bars=1, repeat=2, variation=3, tracks={"A": {"params": {"cutoff": 300}}})],
     )
     out, _, stems = projects.render_project(p, render)
     assert out.shape == (1875, 1)  # boundaries 0, 937.5, 1875 round to 0, 938, 1875 without drift
-    assert np.all(out == 3) and np.array_equal(out, stems["A"])
+    assert np.all(out == 300) and np.array_equal(out, stems["A"])
     assert seen[0]["seed"] != seen[1]["seed"] and seen[0]["humanize"] == 0.01
     assert seen[0]["waveform"] == "sine" and seen[0]["velocity_humanize"] == 0.1
     f = tmp_path / "project.json"
