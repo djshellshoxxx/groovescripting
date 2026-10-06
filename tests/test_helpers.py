@@ -84,7 +84,7 @@ def test_project_exact_clock_section_variation_and_overrides(tmp_path):
 
     p = dict(
         version=1,
-        bpm=240000,
+        bpm=512,
         beats=1,
         bars=1,
         sample_rate=10000,
@@ -96,7 +96,7 @@ def test_project_exact_clock_section_variation_and_overrides(tmp_path):
         sections=[dict(bars=1, repeat=2, variation=3, tracks={"A": {"params": {"cutoff": 3}}})],
     )
     out, _, stems = projects.render_project(p, render)
-    assert out.shape == (5, 1)  # global boundaries 0, 2.5, 5 round to 0, 3, 5 without drift
+    assert out.shape == (1875, 1)  # boundaries 0, 937.5, 1875 round to 0, 938, 1875 without drift
     assert np.all(out == 3) and np.array_equal(out, stems["A"])
     assert seen[0]["seed"] != seen[1]["seed"] and seen[0]["humanize"] == 0.01
     assert seen[0]["waveform"] == "sine" and seen[0]["velocity_humanize"] == 0.1
