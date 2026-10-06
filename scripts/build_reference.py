@@ -103,6 +103,9 @@ DESCRIPTIONS = {
     "diagnose": "Report playback backend availability.",
     "test_tone": "Play an internally generated test tone.",
     "repeat": "Playback repetition count.",
+    "action": "MIDI interchange action: import or export.",
+    "instrument": "Instrument assigned to imported melodic MIDI tracks.",
+    "no_quantize": "Preserve imported MIDI beat fractions instead of quantizing.",
     "version": "Print package version and exit.",
     "help": "Print command usage and exit.",
 }
@@ -122,8 +125,21 @@ def bounds(action):
 parts = []
 for tool, kind in TOOLS.items():
     rows = []
-    for a in parser(tool)._actions:
-        flags = ", ".join(a.option_strings) if a.option_strings else a.dest.upper()
+    tool_parser = parser(tool)
+    entries = [("", action) for action in tool_parser._actions]
+    if kind == "midi":
+        subcommands = next(
+            action for action in tool_parser._actions if isinstance(action, argparse._SubParsersAction)
+        )
+        entries = [("", action) for action in tool_parser._actions if action is not subcommands]
+        for command, subparser in subcommands.choices.items():
+            entries.extend(
+                (command + " ", action)
+                for action in subparser._actions
+                if action.dest != "help"
+            )
+    for prefix, a in entries:
+        flags = prefix + (", ".join(a.option_strings) if a.option_strings else a.dest.upper())
         default = a.default
         if default is None and kind in ("drum", "bass", "lead"):
             default = presets.DEFAULTS.get(
@@ -135,6 +151,14 @@ for tool, kind in TOOLS.items():
             default = "—"
         choice = ", ".join(map(str, a.choices)) if a.choices is not None else bounds(a)
         meaning = DESCRIPTIONS.get(a.dest, a.help or "See command help.")
+        if kind == "midi" and prefix == "import " and a.dest == "input":
+            meaning = "Standard MIDI File to convert into a GrooveScripting project."
+        if kind == "midi" and prefix == "export " and a.dest == "input":
+            meaning = "Version 1 GrooveScripting project to export as Standard MIDI."
+        if kind == "midi" and prefix == "import " and a.dest == "output":
+            meaning = "Destination project JSON path."
+        if kind == "midi" and prefix == "export " and a.dest == "output":
+            meaning = "Destination Standard MIDI File path."
         if kind == "fx" and a.dest == "preset":
             meaning = "Version 1 effect-chain JSON preset file."
         if kind == "mix" and a.dest == "sample_rate":
