@@ -1,8 +1,8 @@
 import copy
 
 import pytest
-from groovescripting import variation
 
+from groovescripting import variation
 
 BASE_NOTES = [
     {"beat": 0.0, "duration": 0.25, "notes": [60], "velocity": 0.8, "probability": 1},
