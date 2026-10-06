@@ -9,6 +9,7 @@ import numpy as np
 from .audio import buffer, mix, rate
 from .music import beat_frame
 from .presets import DEFAULTS, EXTRA, SOUND_DEFAULTS
+from .validation import validate_common_values, validate_instrument_params
 
 
 def validate(project):
@@ -31,10 +32,7 @@ def validate(project):
     }
     if unknown:
         raise ValueError("unknown project keys: " + ", ".join(sorted(unknown)))
-    for k in ("humanize", "velocity_humanize"):
-        v = project.get(k, 0)
-        if not isinstance(v, (int, float)) or not np.isfinite(v) or v < 0:
-            raise ValueError(f"{k} must be finite and nonnegative")
+    validate_common_values(project)
     rate(project.get("sample_rate", 44100))
     for k, default in [("bpm", 120), ("beats", 4), ("bars", 1), ("subdivision", 4)]:
         v = project.get(k, default)
@@ -44,9 +42,6 @@ def validate(project):
             raise ValueError(f"{k} must be integer")
     if project.get("channels", 2) not in (1, 2):
         raise ValueError("channels must be 1 or 2")
-    swing = project.get("swing", 0)
-    if not isinstance(swing, (int, float)) or not np.isfinite(swing) or not 0 <= swing <= 1:
-        raise ValueError("swing must be within [0,1]")
     seed = project.get("seed", 0)
     if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
         raise ValueError("seed must be a nonnegative integer")
@@ -83,9 +78,7 @@ def validate(project):
             raise ValueError("unknown instrument")
         if not isinstance(t.get("params", {}), dict):
             raise ValueError("params must be an object")
-        unknown = set(t.get("params", {})) - (set(DEFAULTS) | set(SOUND_DEFAULTS) | EXTRA)
-        if unknown:
-            raise ValueError("unknown params: " + ", ".join(sorted(unknown)))
+        validate_instrument_params(t["instrument"], t.get("params", {}))
         for k, default in [("gain", 1), ("pan", 0), ("offset", 0), ("trim", None)]:
             value = t.get(k, default)
             if value is not None and (not isinstance(value, (int, float)) or not np.isfinite(value)):
