@@ -203,7 +203,7 @@ def render_project(project, render_fn, tail="cut", automation_fn=None):
                 if lanes:
                     data, _ = mix([dict(data=data, sample_rate=source)], sr, channels)
                     source = sr
-                    data = automation_fn(data, sr, bpm, lanes, cursor_beats)
+                    data = automation_fn(data, sr, bpm, lanes, cursor_beats + float(t.get("offset", 0)))
                 track = dict(
                     data=data,
                     sample_rate=source,
