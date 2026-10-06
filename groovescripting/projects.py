@@ -8,7 +8,6 @@ import numpy as np
 
 from .audio import buffer, mix, rate
 from .music import beat_frame
-from .presets import DEFAULTS, EXTRA, SOUND_DEFAULTS
 from .validation import validate_common_values, validate_instrument_params
 
 
