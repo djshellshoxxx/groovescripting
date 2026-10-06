@@ -59,6 +59,9 @@ jobs:
           tests/test_synth.py
           tests/test_devices.py
           tests/test_dispatch.py
+          tests/test_variation.py
+          tests/test_automation.py
+          tests/test_midi.py
           --cov=groovescripting
           --cov-report=term-missing
           --cov-fail-under=70
