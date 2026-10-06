@@ -87,6 +87,10 @@ def parser(tool):
     p.add_argument("--log-format", choices=["text", "json"], default="text")
     p.add_argument("--json", action="store_true", help="machine-readable information/status")
     kind = TOOLS[tool]
+    if kind == "midi":
+        from .midi import parser as midi_parser
+
+        return midi_parser()
     if kind == "info":
         p.add_argument("input")
         return finish_parser(p, kind)
