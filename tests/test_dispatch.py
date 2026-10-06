@@ -50,10 +50,10 @@ def test_project_rounding_does_not_accumulate_and_humanization_precedence():
     seen = []
     p = {
         "version": 1,
-        "bpm": 240000,
+        "bpm": 512,
         "beats": 1,
         "bars": 1,
-        "sample_rate": 10000,
+        "sample_rate": 8000,
         "channels": 1,
         "tracks": [{"name": "B", "instrument": "bass", "preset": "sub", "params": {"humanize": 0.02}}],
         "sections": [{"bars": 1, "repeat": 100}],
@@ -64,7 +64,7 @@ def test_project_rounding_does_not_accumulate_and_humanization_precedence():
         return np.zeros((3, 1))
 
     result, _, _ = projects.render_project(p, render)
-    assert len(result) == beat_frame(100, p["bpm"], 10000) == 250
+    assert len(result) == beat_frame(100, p["bpm"], 8000) == 93750
     assert all(o["humanize"] == 0.02 for o in seen)
     p["humanize"] = 0.01
     projects.render_project(p, render)

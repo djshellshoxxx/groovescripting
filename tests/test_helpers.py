@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from groovescripting import audio, effects, projects
+from groovescripting import audio, effects, presets, projects
 
 
 def test_io_and_overwrite(tmp_path):
@@ -84,20 +84,20 @@ def test_project_exact_clock_section_variation_and_overrides(tmp_path):
 
     p = dict(
         version=1,
-        bpm=240000,
+        bpm=512,
         beats=1,
         bars=1,
-        sample_rate=10000,
+        sample_rate=8000,
         channels=1,
         seed=2,
         humanize=0.01,
         velocity_humanize=0.1,
-        tracks=[dict(name="A", instrument="bass", preset="sub", params={"cutoff": 2})],
-        sections=[dict(bars=1, repeat=2, variation=3, tracks={"A": {"params": {"cutoff": 3}}})],
+        tracks=[dict(name="A", instrument="bass", preset="sub", params={"cutoff": 200})],
+        sections=[dict(bars=1, repeat=2, variation=3, tracks={"A": {"params": {"cutoff": 300}}})],
     )
     out, _, stems = projects.render_project(p, render)
-    assert out.shape == (5, 1)  # global boundaries 0, 2.5, 5 round to 0, 3, 5 without drift
-    assert np.all(out == 3) and np.array_equal(out, stems["A"])
+    assert out.shape == (1875, 1)  # boundaries 0, 937.5, 1875 round to 0, 938, 1875 without drift
+    assert np.all(out == 300) and np.array_equal(out, stems["A"])
     assert seen[0]["seed"] != seen[1]["seed"] and seen[0]["humanize"] == 0.01
     assert seen[0]["waveform"] == "sine" and seen[0]["velocity_humanize"] == 0.1
     f = tmp_path / "project.json"
@@ -163,3 +163,90 @@ def test_lowpass_reduces_high_frequency_energy_and_resonance_changes_response():
     assert high < low * 0.03
     a = effects.apply(x, sr, [dict(type="lowpass", hz=700, resonance=0.8)])
     assert not np.allclose(a[:, 0], y)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("bpm", 1000.0001),
+        ("beats", 33),
+        ("bars", 1025),
+        ("subdivision", 65),
+        ("swing", 0.5),
+        ("sample_rate", 192001),
+        ("seed", 2**63),
+        ("humanize", 0.100001),
+        ("velocity_humanize", 0.500001),
+    ],
+)
+def test_project_globals_match_cli_limits(field, value):
+    project = dict(version=1, tracks=[dict(name="A", instrument="drum")])
+    project[field] = value
+    with pytest.raises(ValueError):
+        projects.validate(project)
+
+
+@pytest.mark.parametrize(
+    ("instrument", "params"),
+    [
+        ("drum", {"waveform": "saw"}),
+        ("drum", {"pitch": 20001}),
+        ("bass", {"unison": 2}),
+        ("bass", {"resonance": 1.01}),
+        ("lead", {"voices": 33}),
+        ("lead", {"arp_rate": 0}),
+    ],
+)
+def test_project_rejects_incompatible_or_out_of_range_instrument_params(instrument, params):
+    project = dict(version=1, tracks=[dict(name="A", instrument=instrument, params=params)])
+    with pytest.raises(ValueError):
+        projects.validate(project)
+
+
+def test_project_accepts_cli_boundary_values():
+    project = dict(
+        version=1,
+        bpm=1000,
+        beats=32,
+        bars=1024,
+        subdivision=64,
+        swing=0.49,
+        sample_rate=192000,
+        seed=2**63 - 1,
+        humanize=0.1,
+        velocity_humanize=0.5,
+        tracks=[
+            dict(
+                name="A",
+                instrument="lead",
+                params={
+                    "voices": 32,
+                    "unison": 8,
+                    "arp_rate": 0.01,
+                    "resonance": 1,
+                    "pulse_width": 0.95,
+                },
+            )
+        ],
+    )
+    assert projects.validate(project) is project
+
+
+@pytest.mark.parametrize(
+    ("instrument", "params"),
+    [
+        ("drum", {"waveform": "triangle"}),
+        ("bass", {"voices": 2}),
+        ("lead", {"voices": 33}),
+    ],
+)
+def test_preset_load_rejects_params_cli_would_reject(tmp_path, instrument, params):
+    path = tmp_path / "invalid.json"
+    path.write_text(
+        __import__("json").dumps(
+            {"version": 1, "instrument": instrument, "name": "invalid", "params": params}
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError):
+        presets.load(instrument, path)
