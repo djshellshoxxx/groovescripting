@@ -65,7 +65,7 @@ Source: the complete implementation request attached on 2026-10-03 and the addit
 | Q03 | Exact loops versus full tails; explicit repeat-loop tail strategy | CLI `--tail cut/full/wrap`, effects fold tails | Effect length/wrap tests; implemented |
 | Q04 | Event placement/duration/swing/boundaries tested | Shared clock, renderer scheduler | Synth timing/boundary tests; implemented |
 | Q05 | Latency documented; offline distinct from live; no hard real-time guarantee | Research/spec/site limitations | Offline benchmark 151200 frames in0.329 seconds on local host; no realtime claim; actual host latency unmeasured |
-| P01 | Installable console package, bounded dependencies | `pyproject.toml`, eight entry points | Wheel and sdist built; wheel installed into clean venv; local entry-point smoke passed |
+| P01 | Installable console package, bounded dependencies | `pyproject.toml`, nine entry points | Wheel and sdist built; wheel installed into clean venv; local entry-point smoke passed |
 | P02 | Windows/Linux/macOS install, uninstall, runtime fallback; accurate failure behavior/no privilege escalation | README/site, launchers | Local clean wheel install passed; uninstall instructions and runtime fallback documented; Windows/macOS remote CI external |
 | P03 | Optional playback/system-volume extras preserve offline use | `pyproject.toml` | Dependency mock and offline installation tests pending |
 | P04 | Downloadable archives/scripts and honest native/launcher explanation | `scripts/package_downloads.py`, `docs/downloads` | Download bundles regenerated and static local links passed; external served downloads remain to verify |
@@ -80,7 +80,7 @@ Source: the complete implementation request attached on 2026-10-03 and the addit
 | G05 | Favicon/responsiveness/keyboard/mobile readable; all controls work | SVG, CSS focus/skip link, JS copy/search | Real browser checks pending |
 | G06 | Optional browser playground synchronized controls/export with honest parity | `spec/website.md` | Optional omitted; no nonfunctional placeholder |
 | G07 | Pages established/suitable Actions deployment; repo-subpath asset paths | `.github/workflows/pages.yml` and relative local links | Local links/build passed; live Pages deployment succeeded |
-| T01 | CLI parsing/ranges/incompatibilities/exit codes; patterns and invalid notes | CLI validation and music parser tests | 89-test final full run passed; see verification report |
+| T01 | CLI parsing/ranges/incompatibilities/exit codes; patterns and invalid notes | CLI validation and music parser tests | 141-test 0.2.0 matrix run passed; see verification report |
 | T02 | Timing/frame counts/alignment; every instrument/helper; seed determinism | Synth/helpers/devices suites | 89-test final full run passed; see verification report |
 | T03 | Audio finite/nonempty/formatted; frequency/envelope tolerances | Synth and IO numerical assertions | 89-test final full run passed; see verification report |
 | T04 | Polyphony/stealing/glide/accents/choking | `test_synth.py` | 89-test final full run passed; see verification report |
@@ -88,12 +88,23 @@ Source: the complete implementation request attached on 2026-10-03 and the addit
 | T06 | Mix offset/channel/resampling; overwrite/spaced paths; interruption/dependency errors | Helpers/devices/CLI suites | 89-test final full run passed; see verification report |
 | T07 | Bash/PS launchers when runtime available; clean installation; every doc example | Smoke runner, CI, launcher tests | Bash local and PowerShell Windows CI passed; see verification report |
 | T08 | Real behavioral assertions, not file-existence-only; mocks and real devices when available | Behavioral numerical suites/device mocks | Tests inspected; physical host unavailable |
-| T09 | Lint/tests/package/site checks; OS CI; inspect/fix/rerun actual failures | CI workflow and final verification report | Local89 tests passed; six-platform test/build results in verification report |
+| T09 | Lint/tests/package/site checks; OS CI; inspect/fix/rerun actual failures | CI workflow and final verification report | 0.2.0: 141 tests passed across 15 OS/Python matrix jobs; coverage and dependency audit passed; see verification report |
 | T10 | Actual browser links/downloads/audio/copy/responsive/playground checks | Website test workflow | Live copy/search/audio/source download passed; desktop checked; mobile viewport unavailable; playground omitted |
 | C01 | Nine stages through audit/commit/push/publication, no premature completion | Work record and verification report | Repository published and live Pages checked; see verification report |
 | C02 | Final report tools/install/smoke/test results/performed/unperformed platform checks/limits/blockers/verified links/commit/release | `docs/verification.md` | Must be generated from actual evidence |
 | C03 | Concise final response built/repo/site/download/install/groove/tests/limits; no unsupported complete/published claims | Final response | Pending final handoff |
 | LOG01 | Additional request: opt-in troubleshooting log flag throughout project | `diagnostics.py`, all-tool `--log-file/--log-level/--log-format`; `spec/cli.md` | CLI text/JSON logging, append, exception/stdout/lifecycle regressions included in passing local suites |
+
+## 0.2.0 composition feature traceability
+
+| ID | Requirement / feature | Specification / implementation | Verification |
+|---|---|---|---|
+| F01 | Deterministic pattern mutation without changing note identity | `spec/variation.md`, `variation.py`, synth integration | `test_variation.py`; seeded equality/difference, density, bounds, ghost/fill behavior; included in 141-test matrix |
+| F02 | Project automation lanes continuing across arrangement time | `spec/automation.md`, `automation.py`, `projects.py` | `test_automation.py`; linear/step interpolation, gain/pan/cutoff/saturation, section continuity and schema failures |
+| F03 | Standard MIDI File import/export without realtime MIDI hardware | `spec/midi.md`, `midi.py`, `groovmidi` entry point and launchers | `test_midi.py`; chords, tempo rejection, percussion boundary, sections/transpose, GM drums, overwrite and CLI flow |
+| F04 | New controls use shared persisted/CLI validation | `validation.py`, `presets.py`, CLI parser | Variation/density/ghost/fill ranges exercised by unit and full matrix tests |
+| F05 | New command participates in docs/packaging/platform workflows | `build_reference.py`, Bash/PowerShell launchers, README, CI | nine-tool reference generation and packaging passed; Windows launcher matrix passed |
+| F06 | Cross-platform and dependency quality gates | expanded GitHub Actions matrix, pytest-cov, pip-audit | run 37397677493: all 15 matrix jobs, coverage and dependency audit succeeded |
 
 ## Final audit resolutions and evidence
 
