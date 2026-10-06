@@ -22,6 +22,8 @@ DEFAULTS = dict(
     root="C4",
     humanize=0.0,
     velocity_humanize=0.0,
+    variation=0.0,
+    density=1.0,
 )
 SOUND_DEFAULTS = dict(
     waveform="saw",
@@ -145,6 +147,8 @@ EXTRA = {
     "tone_noise",
     "tail",
     "mode",
+    "ghost_notes",
+    "fill_every",
 }
 
 
