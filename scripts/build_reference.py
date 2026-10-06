@@ -33,6 +33,10 @@ DESCRIPTIONS = {
     "transpose": "Pitch shift in semitones.",
     "humanize": "Random timing variation in seconds.",
     "velocity_humanize": "Random velocity variation.",
+    "variation": "Seeded timing and velocity mutation strength.",
+    "density": "Probability of retaining existing pattern events.",
+    "ghost_notes": "Drum-only probability of inserting low-velocity hits.",
+    "fill_every": "Drum-only fill interval in bars; 0 disables fills.",
     "scale": "Quantize notes to selected scale.",
     "root": "Scale root as a note name.",
     "preset": "Built-in preset name or version 1 JSON preset file.",
@@ -170,4 +174,4 @@ effects = """<section id="effects"><h2>Effect object reference</h2><p>Pass each 
     + '</main><p id="copy-status" role="status" class="toast"></p></body></html>',
     encoding="utf-8",
 )
-print("Generated complete reference for eight tools")
+print("Generated complete reference for nine tools")
