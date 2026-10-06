@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+from .validation import validate_instrument_params
+
 DEFAULTS = dict(
     bpm=120,
     bars=1,
@@ -152,15 +154,15 @@ def names(instrument):
 
 def load(instrument, value):
     if value in BUILTINS[instrument]:
-        return {"version": 1, "instrument": instrument, "name": value, "params": BUILTINS[instrument][value]}
+        params = BUILTINS[instrument][value]
+        validate_instrument_params(instrument, params)
+        return {"version": 1, "instrument": instrument, "name": value, "params": params}
     data = json.loads(Path(value).read_text(encoding="utf-8"))
     if not isinstance(data, dict) or data.get("version") != 1 or data.get("instrument") != instrument:
         raise ValueError("Preset requires version 1 and matching instrument")
     if not isinstance(data.get("params"), dict):
         raise ValueError("Preset params must be an object")
-    unknown = set(data["params"]) - (set(DEFAULTS) | set(SOUND_DEFAULTS) | EXTRA)
-    if unknown:
-        raise ValueError("Unknown preset parameters: " + ", ".join(sorted(unknown)))
+    validate_instrument_params(instrument, data["params"])
     return data
 
 
@@ -175,6 +177,7 @@ def resolve(instrument, preset=None, params=None):
 
 
 def save(path, instrument, params, overwrite=False):
+    validate_instrument_params(instrument, params)
     path = Path(path)
     data = {"version": 1, "instrument": instrument, "name": path.stem, "params": params}
     with path.open("w" if overwrite else "x", encoding="utf-8") as stream:
