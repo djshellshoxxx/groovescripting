@@ -1,7 +1,6 @@
 import copy
 
 import pytest
-
 from groovescripting import variation
 
 
