@@ -20,6 +20,7 @@ TOOLS = {
     "groovfx": "fx",
     "groovplay": "play",
     "groovinfo": "info",
+    "groovmidi": "midi",
 }
 
 
@@ -136,6 +137,8 @@ def parser(tool):
         ]:
             if kind != "drum" or name != "transpose":
                 p.add_argument("--" + name, type=number(low, high, integer))
+        p.add_argument("--variation", type=number(0, 1))
+        p.add_argument("--density", type=number(0, 1))
         p.add_argument("--pattern")
         p.add_argument("--events", metavar="PATH")
         if kind != "drum":
@@ -167,6 +170,8 @@ def parser(tool):
             p.add_argument("--tone-noise", type=number(0, 1))
             p.add_argument("--drum-pattern", action="append", default=[], metavar="VOICE=PATTERN")
             p.add_argument("--drum-param", action="append", default=[], metavar="VOICE.KEY=VALUE")
+            p.add_argument("--ghost-notes", type=number(0, 1))
+            p.add_argument("--fill-every", type=number(0, 128, True))
         else:
             p.add_argument("--waveform", choices=["sine", "triangle", "saw", "pulse", "square"])
             for name, lo, hi in [
@@ -599,6 +604,10 @@ def main(argv=None):
         print(__version__)
         return 0
     tool = argv.pop(0)
+    if tool == "groovmidi":
+        from .midi import cli as midi_cli
+
+        return midi_cli(argv)
     if tool not in TOOLS:
         print("Unknown tool: " + tool, file=sys.stderr)
         return 2
