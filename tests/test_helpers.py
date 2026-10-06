@@ -87,7 +87,7 @@ def test_project_exact_clock_section_variation_and_overrides(tmp_path):
         bpm=512,
         beats=1,
         bars=1,
-        sample_rate=10000,
+        sample_rate=8000,
         channels=1,
         seed=2,
         humanize=0.01,
