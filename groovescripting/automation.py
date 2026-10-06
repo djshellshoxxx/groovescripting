@@ -100,7 +100,6 @@ def apply(data, sample_rate, bpm, lanes, start_beat=0):
         or not isinstance(start_beat, (int, float))
         or isinstance(start_beat, bool)
         or not math.isfinite(start_beat)
-        or start_beat < 0
     ):
         raise ValueError("invalid automation clock")
 
