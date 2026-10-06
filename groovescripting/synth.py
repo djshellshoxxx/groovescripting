@@ -8,6 +8,7 @@ from scipy.signal import lfilter
 
 from . import presets
 from .music import beat_frame, frequency, note_value, parse_pattern
+from . import variation as event_variation
 
 DRUMS = ("kick", "snare", "closed_hat", "open_hat", "clap", "tom", "rim")
 
@@ -259,6 +260,18 @@ def render(instrument, options=None):
             if voice not in DRUMS:
                 raise ValueError("Unknown drum voice " + voice)
             events = _events(dict(o, pattern=pattern), "drum")
+            events = event_variation.mutate(
+                events,
+                "drum",
+                total_beats=beats,
+                subdivision=subdivision,
+                seed=int(o.get("seed", 0)) + DRUMS.index(voice) * 7919,
+                variation=o.get("variation", 0),
+                density=o.get("density", 1),
+                ghost_notes=o.get("ghost_notes", 0),
+                fill_every=o.get("fill_every", 0),
+                beats_per_bar=o.get("beats", 4),
+            )
             for e in events:
                 jitter = float(o.get("velocity_humanize", 0))
                 if not 0 <= jitter <= 1:
@@ -341,6 +354,15 @@ def render(instrument, options=None):
             drum_stereo[start : start + length, 1] += hit * min(1, 1 + voice_pan)
     elif instrument in ("bass", "lead"):
         events = _events(o, "note")
+        events = event_variation.mutate(
+            events,
+            "note",
+            total_beats=beats,
+            subdivision=subdivision,
+            seed=int(o.get("seed", 0)),
+            variation=o.get("variation", 0),
+            density=o.get("density", 1),
+        )
         jobs = []
         for e in events:
             jitter = float(o.get("velocity_humanize", 0))
