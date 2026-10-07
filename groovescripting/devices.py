@@ -68,8 +68,13 @@ def diagnose(sample_rate=44100, device=None, channels=2):
     return result
 
 
-def play(data, sample_rate, device=None, volume=0.7, mute=False, repeat=1):
-    """Play finite normalized audio; never change host master volume."""
+def play(
+    data, sample_rate, device=None, volume=0.7, mute=False, repeat=1, visualize=False, visualizer_height=9
+):
+    """Play finite normalized audio; never change host master volume.
+
+    ``visualize`` draws an ASCII waveform on stderr that follows the playhead.
+    """
     _rate(sample_rate)
     _gain(volume)
     if isinstance(repeat, bool) or not isinstance(repeat, int) or not 1 <= repeat <= 1000:
@@ -85,19 +90,30 @@ def play(data, sample_rate, device=None, volume=0.7, mute=False, repeat=1):
         raise ValueError("audio samples must be finite and normalized to -1..1")
     sd = _backend()
     channels = 1 if samples.ndim == 1 else samples.shape[1]
+    display = None
+    if visualize:
+        from . import visualizer
+
+        if visualizer.available():
+            display = visualizer.Display(samples, sample_rate, height=visualizer_height)
+        else:
+            log.warning("Visualizer skipped: stderr is not an interactive terminal")
     try:
         sd.check_output_settings(device=device, channels=channels, dtype="float32", samplerate=sample_rate)
         output = samples * (0 if mute else volume)
         log.info(
-            "Playback rate=%s device=%s channels=%s repeat=%s mute=%s",
+            "Playback rate=%s device=%s channels=%s repeat=%s mute=%s visualize=%s",
             sample_rate,
             device,
             channels,
             repeat,
             mute,
+            display is not None,
         )
         for _ in range(repeat):
             sd.play(output, samplerate=sample_rate, device=device)
+            if display is not None:
+                display.run()
             sd.wait()
     except KeyboardInterrupt:
         log.info("Playback interrupted")
@@ -109,7 +125,7 @@ def play(data, sample_rate, device=None, volume=0.7, mute=False, repeat=1):
         sd.stop()
 
 
-def test_tone(sample_rate=44100, device=None, volume=0.1, repeat=1, channels=1):
+def test_tone(sample_rate=44100, device=None, volume=0.1, repeat=1, channels=1, visualize=False):
     _rate(sample_rate)
     _gain(volume)
     count = int(sample_rate * 0.5)
@@ -121,7 +137,7 @@ def test_tone(sample_rate=44100, device=None, volume=0.1, repeat=1, channels=1):
         raise ValueError("channels must be 1 or 2")
     if channels == 2:
         tone = np.repeat(tone[:, None], 2, axis=1)
-    play(tone, sample_rate, device=device, volume=volume, repeat=repeat)
+    play(tone, sample_rate, device=device, volume=volume, repeat=repeat, visualize=visualize)
 
 
 def capabilities():

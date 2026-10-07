@@ -10,6 +10,15 @@ optionally mutes, validates repeat 1..1000 and settings, and always stops on exi
 KeyboardInterrupt. Repetition streams the existing array sequentially without a large copy.
 The test tone is 440 Hz for 0.5 seconds with short fades at default gain 0.1.
 
+The optional visualizer (`visualize=True`, CLI `--visualizer`, default off) draws a scrolling
+ASCII waveform on stderr during each repeat. Each column is the min..max envelope of a slice
+of the mono mixdown in a 2 second window centred on the playhead; a status row reports elapsed
+and total time plus peak level. Frames redraw in place at 30 fps using ANSI cursor movement
+(enabled on Windows consoles when possible); the cursor is hidden while drawing and always
+restored, including on KeyboardInterrupt. Playback position is wall-clock time since the stream
+started. It draws the unscaled signal, so mute still shows the music. When stderr is not a
+TTY it is skipped with a warning; it never alters audio output.
+
 System master volume changes are explicit only: volume is scalar 0..1 and unmute is opt-in.
 Windows uses optional pycaw endpoint API; Linux selects pactl or amixer; macOS uses
 osascript. Subprocesses use argument lists, no shell, checked results and timeout. Unsupported

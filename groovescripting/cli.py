@@ -96,6 +96,18 @@ def parser(tool):
     p.add_argument("--mute", action="store_true")
     p.add_argument("--system-volume", type=number(0, 1), help="explicitly change OS master volume")
     p.add_argument("--system-unmute", action="store_true", help="explicitly clear OS master mute")
+    p.add_argument(
+        "--visualizer",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="draw an ASCII waveform in the terminal that follows playback (off by default)",
+    )
+    p.add_argument(
+        "--visualizer-height",
+        type=number(3, 40, True),
+        default=9,
+        help="waveform rows for --visualizer",
+    )
     if kind == "play":
         p.add_argument("input", nargs="?")
         p.add_argument("--devices", action="store_true")
@@ -338,6 +350,8 @@ def playback(args, data, sr):
         volume=args.volume,
         mute=args.mute,
         repeat=getattr(args, "repeat", 1),
+        visualize=args.visualizer,
+        visualizer_height=args.visualizer_height,
     )
 
 
@@ -351,6 +365,8 @@ def execute(tool, args, logger):
         and not (args.play or args.play_only)
     ):
         raise ValueError("System volume flags require --play or --play-only")
+    if kind not in ("play", "info") and args.visualizer and not (args.play or args.play_only):
+        raise ValueError("--visualizer requires --play or --play-only")
     if kind == "info":
         path = Path(args.input)
         if path.suffix.lower() == ".json":
@@ -376,6 +392,8 @@ def execute(tool, args, logger):
 
         if (args.devices or args.diagnose) and (args.system_volume is not None or args.system_unmute):
             raise ValueError("System volume changes cannot be combined with --devices or --diagnose")
+        if (args.devices or args.diagnose) and args.visualizer:
+            raise ValueError("--visualizer cannot be combined with --devices or --diagnose")
         if args.devices:
             emit(devices.list_devices(), args.json)
         elif args.diagnose:
@@ -396,6 +414,7 @@ def execute(tool, args, logger):
                 volume=0 if args.mute else min(args.volume, 0.1),
                 repeat=args.repeat,
                 channels=args.channels or 1,
+                visualize=args.visualizer,
             )
         elif args.input:
             data, sr = audio.read(args.input)

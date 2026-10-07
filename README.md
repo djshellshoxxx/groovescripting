@@ -47,6 +47,26 @@ Use `examples/arrangement.json` for a section based arrangement. Protect existin
 
 Each command exposes `--help`. Website source and detailed command documentation are in `docs/`; engineering specifications are in `spec/`. Every command has CLI help; `docs/reference.html` contains the generated full flag defaults and ranges.
 
+## Live ASCII waveform
+
+Add `--visualizer` to any playback to draw a scrolling ASCII waveform in the terminal that follows the music. It is off by default; `--no-visualizer` turns it off explicitly, which is handy for overriding a wrapper script.
+
+```sh
+groovplay groove.wav --visualizer
+groovseq examples/first-groove.json --play-only --visualizer --visualizer-height 13
+```
+
+```text
+    #                               |                                   
+    ###             ##             #|             ###             ####  
+################### ################|############################ ######
+####################################|###################################
+    ####### ## #    ###    ##      #|### # ##      ###    #       #### #
+00:01.3 / 00:03.4  [================================      ]   -1.4 dB
+```
+
+The `|` column is the playhead, centred in a two second window; the last row shows elapsed time, total length and the current peak level. The display is plain ASCII on stderr, so it works over SSH (PuTTY included) and keeps `--json` output on stdout clean. It is skipped with a logged warning when stderr is not an interactive terminal. Rendering commands accept it only with `--play` or `--play-only`.
+
 ## Troubleshooting logs
 
 ```sh

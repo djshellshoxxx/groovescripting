@@ -79,6 +79,8 @@ DESCRIPTIONS = {
     "mute": "Mute application playback.",
     "system_volume": "Explicitly request OS master volume change.",
     "system_unmute": "Explicitly request OS master unmute.",
+    "visualizer": "Show (or with --no-visualizer hide) a live ASCII waveform during playback.",
+    "visualizer_height": "Waveform rows drawn by --visualizer.",
     "tail": "cut truncates to loop; full retains release; wrap folds tails into loop.",
     "effect": "Repeat JSON effect objects to build an ordered effects chain.",
     "normalize": "Scale peak to 0.95 (mix uses 1.0).",
