@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+from . import automation
 from .audio import buffer, mix, rate
 from .music import beat_frame
 from .validation import validate_common_values, validate_instrument_params
@@ -63,6 +64,7 @@ def validate(project):
             "solo",
             "offset",
             "trim",
+            "automation",
         }
         if unknown:
             raise ValueError("unknown track keys: " + ", ".join(sorted(unknown)))
@@ -78,6 +80,7 @@ def validate(project):
         if not isinstance(t.get("params", {}), dict):
             raise ValueError("params must be an object")
         validate_instrument_params(t["instrument"], t.get("params", {}))
+        automation.validate(t.get("automation", []))
         for k, default in [("gain", 1), ("pan", 0), ("offset", 0), ("trim", None)]:
             value = t.get(k, default)
             if value is not None and (not isinstance(value, (int, float)) or not np.isfinite(value)):
@@ -103,7 +106,18 @@ def validate(project):
         for name, v in overrides.items():
             if not isinstance(v, dict):
                 raise ValueError("track override must be an object")
-            if set(v) - {"preset", "params", "pattern", "gain", "pan", "mute", "solo", "offset", "trim"}:
+            if set(v) - {
+                "preset",
+                "params",
+                "pattern",
+                "gain",
+                "pan",
+                "mute",
+                "solo",
+                "offset",
+                "trim",
+                "automation",
+            }:
                 raise ValueError("unknown or immutable track override keys")
             original = next(t for t in tracks if t["name"] == name)
             merged = dict(original, **{k: value for k, value in v.items() if k != "params"})
@@ -128,8 +142,9 @@ def save(path, project, overwrite=False):
     p.write_text(json.dumps(project, indent=2) + "\n", encoding="utf-8")
 
 
-def render_project(project, render_fn, tail="cut"):
+def render_project(project, render_fn, tail="cut", automation_fn=None):
     validate(project)
+    automation_fn = automation.apply if automation_fn is None else automation_fn
     if tail not in ("cut", "full", "wrap"):
         raise ValueError("tail must be cut, full or wrap")
     sr = rate(project.get("sample_rate", 44100))
@@ -194,8 +209,14 @@ def render_project(project, render_fn, tail="cut"):
                     params["tail"] = 0
                 result = render_fn(t["instrument"], params)
                 data, source = result if isinstance(result, tuple) else (result, sr)
+                data = buffer(data)
+                lanes = t.get("automation", [])
+                if lanes:
+                    data, _ = mix([dict(data=data, sample_rate=source)], sr, channels)
+                    source = sr
+                    data = automation_fn(data, sr, bpm, lanes, cursor_beats + float(t.get("offset", 0)))
                 track = dict(
-                    data=buffer(data),
+                    data=data,
                     sample_rate=source,
                     gain=t.get("gain", 1),
                     pan=t.get("pan", 0),

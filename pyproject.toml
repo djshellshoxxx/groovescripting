@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "groovescripting"
-version = "0.1.0"
+version = "0.2.0"
 description = "Scriptable drum, bass and lead synthesis with synchronized offline arrangements"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = ["numpy>=1.24,<3", "scipy>=1.10,<2", "soundfile>=0.12,<0.14"]
+dependencies = ["numpy>=1.24,<3", "scipy>=1.10,<2", "soundfile>=0.12,<0.14", "mido>=1.3,<2"]
 
 [project.optional-dependencies]
 playback = ["sounddevice>=0.4.6,<0.6"]
@@ -30,6 +30,7 @@ groovseq = "groovescripting.cli:seq"
 groovfx = "groovescripting.cli:fx"
 groovplay = "groovescripting.cli:play"
 groovinfo = "groovescripting.cli:info"
+groovmidi = "groovescripting.midi:main"
 
 [tool.setuptools.packages.find]
 include = ["groovescripting*"]

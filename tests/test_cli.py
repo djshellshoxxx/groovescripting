@@ -11,7 +11,17 @@ import pytest
 import soundfile as sf
 
 ROOT = Path(__file__).resolve().parents[1]
-TOOLS = ["groovdrm", "groovbss", "groovld", "groovseq", "groovmix", "groovfx", "groovplay", "groovinfo"]
+TOOLS = [
+    "groovdrm",
+    "groovbss",
+    "groovld",
+    "groovseq",
+    "groovmix",
+    "groovfx",
+    "groovplay",
+    "groovinfo",
+    "groovmidi",
+]
 
 
 def cli(*args, ok=True):
