@@ -142,22 +142,21 @@ def save(path, project, overwrite=False):
     p.write_text(json.dumps(project, indent=2) + "\n", encoding="utf-8")
 
 
-def render_project(project, render_fn, tail="cut", automation_fn=None):
+def expand(project, tail="cut"):
+    """Yield every section repetition and each track's resolved render parameters.
+
+    Shared by rendering and tracing so both observe identical seeds, overrides and timing.
+    """
     validate(project)
-    automation_fn = automation.apply if automation_fn is None else automation_fn
     if tail not in ("cut", "full", "wrap"):
         raise ValueError("tail must be cut, full or wrap")
     sr = rate(project.get("sample_rate", 44100))
-    channels = project.get("channels", 2)
     bpm = project.get("bpm", 120)
     beats = project.get("beats", 4)
     sections = project.get("sections") or [dict(bars=project.get("bars", 1))]
-    chunks = []
-    stem_chunks = {t["name"]: [] for t in project["tracks"]}
     sequence = 0
-    section_count = sum(s.get("repeat", 1) for s in sections)
     cursor_beats = 0
-    for section in sections:
+    for section_index, section in enumerate(sections):
         for repetition in range(section.get("repeat", 1)):
             bars = section.get("bars", project.get("bars", 1))
             selected = []
@@ -169,15 +168,12 @@ def render_project(project, render_fn, tail="cut", automation_fn=None):
                 )
                 t.update({k: v for k, v in overrides.items() if k != "params"})
                 selected.append(t)
-            check = dict(project, tracks=selected, sections=[])
-            validate(check)
+            validate(dict(project, tracks=selected, sections=[]))
             solo = any(t.get("solo", False) and not t.get("mute", False) for t in selected)
-            rendered = {}
             target = beat_frame(cursor_beats + bars * beats, bpm, sr) - beat_frame(cursor_beats, bpm, sr)
+            tracks = []
             for index, t in enumerate(selected):
-                if t.get("mute", False) or (solo and not t.get("solo", False)):
-                    rendered[t["name"]] = np.zeros((0, channels))
-                    continue
+                silent = t.get("mute", False) or (solo and not t.get("solo", False))
                 params = dict(t.get("params", {}))
                 if "preset" in t:
                     from .presets import resolve
@@ -192,7 +188,7 @@ def render_project(project, render_fn, tail="cut", automation_fn=None):
                     humanize=project.get("humanize", params.get("humanize", 0)),
                     velocity_humanize=project.get("velocity_humanize", params.get("velocity_humanize", 0)),
                     sample_rate=sr,
-                    channels=channels,
+                    channels=project.get("channels", 2),
                     seed=project.get("seed", 0)
                     + sequence * 1009
                     + index * 9176
@@ -207,45 +203,75 @@ def render_project(project, render_fn, tail="cut", automation_fn=None):
                     )
                 else:
                     params["tail"] = 0
-                result = render_fn(t["instrument"], params)
-                data, source = result if isinstance(result, tuple) else (result, sr)
-                data = buffer(data)
-                lanes = t.get("automation", [])
-                if lanes:
-                    data, _ = mix([dict(data=data, sample_rate=source)], sr, channels)
-                    source = sr
-                    data = automation_fn(data, sr, bpm, lanes, cursor_beats + float(t.get("offset", 0)))
-                track = dict(
-                    data=data,
-                    sample_rate=source,
-                    gain=t.get("gain", 1),
-                    pan=t.get("pan", 0),
-                    offset_seconds=beat_frame(t.get("offset", 0), bpm, sr) / sr,
-                )
-                if t.get("trim") is not None:
-                    track["trim_seconds"] = beat_frame(t["trim"], bpm, sr) / sr
-                stem, _ = mix([track], sr, channels)
-                if tail == "wrap":
-                    folded = np.zeros((target, channels))
-                    for start in range(0, len(stem), target):
-                        part = stem[start : start + target]
-                        folded[: len(part)] += part
-                    stem = folded
-                rendered[t["name"]] = (
-                    stem if tail == "full" and sequence == section_count - 1 else stem[:target]
-                )
-            if tail == "full" and sequence == section_count - 1:
-                target = max([target] + [len(stem) for stem in rendered.values()])
-            chunk = np.zeros((target, channels))
-            for name in stem_chunks:
-                stem = rendered[name]
-                padded = np.zeros_like(chunk)
-                padded[: len(stem)] = stem
-                stem_chunks[name].append(padded)
-                chunk += padded
-            chunks.append(chunk)
+                tracks.append(dict(index=index, track=t, params=params, silent=silent))
+            yield dict(
+                section_index=section_index,
+                section=section,
+                repetition=repetition,
+                sequence=sequence,
+                cursor_beats=cursor_beats,
+                bars=bars,
+                target=target,
+                tracks=tracks,
+            )
             sequence += 1
             cursor_beats += bars * beats
+
+
+def render_project(project, render_fn, tail="cut", automation_fn=None):
+    automation_fn = automation.apply if automation_fn is None else automation_fn
+    validate(project)
+    sr = rate(project.get("sample_rate", 44100))
+    channels = project.get("channels", 2)
+    bpm = project.get("bpm", 120)
+    sections = project.get("sections") or [dict(bars=project.get("bars", 1))]
+    section_count = sum(s.get("repeat", 1) for s in sections)
+    chunks = []
+    stem_chunks = {t["name"]: [] for t in project["tracks"]}
+    for step in expand(project, tail):
+        target = step["target"]
+        sequence = step["sequence"]
+        rendered = {}
+        for item in step["tracks"]:
+            t = item["track"]
+            if item["silent"]:
+                rendered[t["name"]] = np.zeros((0, channels))
+                continue
+            result = render_fn(t["instrument"], item["params"])
+            data, source = result if isinstance(result, tuple) else (result, sr)
+            data = buffer(data)
+            lanes = t.get("automation", [])
+            if lanes:
+                data, _ = mix([dict(data=data, sample_rate=source)], sr, channels)
+                source = sr
+                data = automation_fn(data, sr, bpm, lanes, step["cursor_beats"] + float(t.get("offset", 0)))
+            track = dict(
+                data=data,
+                sample_rate=source,
+                gain=t.get("gain", 1),
+                pan=t.get("pan", 0),
+                offset_seconds=beat_frame(t.get("offset", 0), bpm, sr) / sr,
+            )
+            if t.get("trim") is not None:
+                track["trim_seconds"] = beat_frame(t["trim"], bpm, sr) / sr
+            stem, _ = mix([track], sr, channels)
+            if tail == "wrap":
+                folded = np.zeros((target, channels))
+                for start in range(0, len(stem), target):
+                    part = stem[start : start + target]
+                    folded[: len(part)] += part
+                stem = folded
+            rendered[t["name"]] = stem if tail == "full" and sequence == section_count - 1 else stem[:target]
+        if tail == "full" and sequence == section_count - 1:
+            target = max([target] + [len(stem) for stem in rendered.values()])
+        chunk = np.zeros((target, channels))
+        for name in stem_chunks:
+            stem = rendered[name]
+            padded = np.zeros_like(chunk)
+            padded[: len(stem)] = stem
+            stem_chunks[name].append(padded)
+            chunk += padded
+        chunks.append(chunk)
     return np.concatenate(chunks), sr, {name: np.concatenate(values) for name, values in stem_chunks.items()}
 
 

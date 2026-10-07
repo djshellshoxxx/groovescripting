@@ -1,4 +1,4 @@
-"""Shared CLI dispatcher and configuration resolution for eight tools."""
+"""Shared CLI dispatcher and configuration resolution for every GrooveScripting tool."""
 
 import argparse
 import json
@@ -21,7 +21,27 @@ TOOLS = {
     "groovplay": "play",
     "groovinfo": "info",
     "groovmidi": "midi",
+    "groovlint": "lint",
+    "groovdebug": "debug",
+    "groovtest": "test",
+    "groovtime": "time",
+    "groovmerge": "merge",
 }
+# Tools whose parser and entry point live in their own module (kind -> module name).
+MODULE_TOOLS = {
+    "midi": "midi",
+    "lint": "lint",
+    "debug": "debug",
+    "test": "musictest",
+    "time": "timeline",
+    "merge": "merge",
+}
+
+
+def module_for(kind):
+    import importlib
+
+    return importlib.import_module("." + MODULE_TOOLS[kind], __package__)
 
 
 class Parser(argparse.ArgumentParser):
@@ -87,10 +107,8 @@ def parser(tool):
     p.add_argument("--log-format", choices=["text", "json"], default="text")
     p.add_argument("--json", action="store_true", help="machine-readable information/status")
     kind = TOOLS[tool]
-    if kind == "midi":
-        from .midi import parser as midi_parser
-
-        return midi_parser()
+    if kind in MODULE_TOOLS:
+        return module_for(kind).parser()
     if kind == "info":
         p.add_argument("input")
         return finish_parser(p, kind)
@@ -627,10 +645,8 @@ def main(argv=None):
         print(__version__)
         return 0
     tool = argv.pop(0)
-    if tool == "groovmidi":
-        from .midi import cli as midi_cli
-
-        return midi_cli(argv)
+    if tool in TOOLS and TOOLS[tool] in MODULE_TOOLS:
+        return module_for(TOOLS[tool]).cli(argv)
     if tool not in TOOLS:
         print("Unknown tool: " + tool, file=sys.stderr)
         return 2

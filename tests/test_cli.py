@@ -21,6 +21,11 @@ TOOLS = [
     "groovplay",
     "groovinfo",
     "groovmidi",
+    "groovlint",
+    "groovdebug",
+    "groovtest",
+    "groovtime",
+    "groovmerge",
 ]
 
 

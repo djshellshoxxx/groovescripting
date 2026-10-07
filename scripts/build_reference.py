@@ -129,10 +129,10 @@ for tool, kind in TOOLS.items():
     rows = []
     tool_parser = parser(tool)
     entries = [("", action) for action in tool_parser._actions]
-    if kind == "midi":
-        subcommands = next(
-            action for action in tool_parser._actions if isinstance(action, argparse._SubParsersAction)
-        )
+    subcommands = next(
+        (action for action in tool_parser._actions if isinstance(action, argparse._SubParsersAction)), None
+    )
+    if subcommands is not None:
         entries = [("", action) for action in tool_parser._actions if action is not subcommands]
         for command, subparser in subcommands.choices.items():
             entries.extend((command + " ", action) for action in subparser._actions if action.dest != "help")
@@ -196,4 +196,4 @@ effects = """<section id="effects"><h2>Effect object reference</h2><p>Pass each 
     + '</main><p id="copy-status" role="status" class="toast"></p></body></html>',
     encoding="utf-8",
 )
-print("Generated complete reference for nine tools")
+print(f"Generated complete reference for {len(TOOLS)} tools")
