@@ -7,6 +7,7 @@ import numpy as np
 from scipy.signal import lfilter
 
 from . import presets
+from . import variation as event_variation
 from .music import beat_frame, frequency, note_value, parse_pattern
 
 DRUMS = ("kick", "snare", "closed_hat", "open_hat", "clap", "tom", "rim")
@@ -141,7 +142,35 @@ def _events(o, kind):
     )
 
 
-def render(instrument, options=None):
+def _tag(events):
+    for index, event in enumerate(events):
+        event["_index"] = index
+        event["_source_beat"] = float(event["beat"])
+    return events
+
+
+def _record(trace, e, **fields):
+    """Append one scheduling trace record; tracing never draws random values."""
+    generated = "_index" not in e
+    item = dict(
+        source_index=None if generated else e["_index"],
+        origin="variation" if generated else "pattern",
+        source_beat=float(e.get("_source_beat", e["beat"])),
+        beat=float(e["beat"]),
+        duration=float(e.get("duration", 0)),
+        probability=float(e.get("probability", 1)),
+        accent=bool(e.get("accent", False)),
+    )
+    item.update(fields)
+    trace.append(item)
+    return item
+
+
+def render(instrument, options=None, trace=None):
+    """Render audio, or with a trace list record the event schedule and return None.
+
+    Tracing stops before synthesis and draws exactly the same scheduling random values as a render.
+    """
     o = dict(options or {})
     unknown = set(o) - (
         set(presets.DEFAULTS) | set(presets.SOUND_DEFAULTS) | presets.EXTRA | {"mode", "note"}
@@ -234,7 +263,7 @@ def render(instrument, options=None):
     if not 0 <= swing <= 1 or subdivision <= 0:
         raise ValueError("Invalid swing or subdivision")
 
-    def start_of(e):
+    def start_of(e, info=None):
         if (
             not 0 <= float(e.get("probability", 1)) <= 1
             or not 0 <= float(e.get("velocity", 1)) <= 1
@@ -246,11 +275,12 @@ def render(instrument, options=None):
             raise ValueError("humanize must be nonnegative seconds")
         beat = float(e["beat"])
         index = int(np.floor(beat * subdivision + 0.5))
-        return max(
-            0,
-            beat_frame(beat + offset + (swing / (2 * subdivision) if index % 2 else 0), bpm, sr)
-            + int(rng.uniform(-humanize, humanize) * sr),
-        )
+        swung = swing / (2 * subdivision) if index % 2 else 0
+        shift = int(rng.uniform(-humanize, humanize) * sr)
+        frame = beat_frame(beat + offset + swung, bpm, sr)
+        if info is not None:
+            info.update(swing_beats=swung, humanize_frames=shift, resolved_beat=beat + offset + swung)
+        return max(0, frame + shift)
 
     if instrument == "drum":
         patterns = o.get("drum_patterns", {o.get("voice", "kick"): o.get("pattern", "x...x...x...x...")})
@@ -259,13 +289,50 @@ def render(instrument, options=None):
             if voice not in DRUMS:
                 raise ValueError("Unknown drum voice " + voice)
             events = _events(dict(o, pattern=pattern), "drum")
+            if trace is not None:
+                _tag(events)
+            events = event_variation.mutate(
+                events,
+                "drum",
+                total_beats=beats,
+                subdivision=subdivision,
+                seed=int(o.get("seed", 0)) + DRUMS.index(voice) * 7919,
+                variation=o.get("variation", 0),
+                density=o.get("density", 1),
+                ghost_notes=o.get("ghost_notes", 0),
+                fill_every=o.get("fill_every", 0),
+                beats_per_bar=o.get("beats", 4),
+            )
             for e in events:
                 jitter = float(o.get("velocity_humanize", 0))
                 if not 0 <= jitter <= 1:
                     raise ValueError("velocity_humanize must be 0..1")
+                before = float(e.get("velocity", 1))
                 e["velocity"] = float(np.clip(e.get("velocity", 1) + rng.uniform(-jitter, jitter), 0, 1))
-                if rng.random() < float(e.get("probability", 1)):
-                    jobs.append((start_of(e), voice, e))
+                roll = rng.random()
+                accepted = roll < float(e.get("probability", 1))
+                info = {} if trace is not None else None
+                if accepted:
+                    jobs.append((start_of(e, info), voice, e))
+                if trace is not None:
+                    _record(
+                        trace,
+                        e,
+                        voice=voice,
+                        notes=[],
+                        velocity_in=before,
+                        velocity=e["velocity"],
+                        roll=float(roll),
+                        accepted=accepted,
+                        frame=jobs[-1][0] if accepted else None,
+                        reason=None if accepted else "probability",
+                        **info,
+                    )
+        if trace is not None:
+            for item in trace:
+                if item["accepted"] and not 0 <= item["frame"] < n:
+                    item.update(accepted=False, reason="outside_render_window")
+            return None
         closed = sorted(start for start, voice, e in jobs if voice == "closed_hat")
         for start, voice, e in sorted(jobs, key=lambda j: j[0]):
             if not 0 <= start < n:
@@ -341,14 +408,41 @@ def render(instrument, options=None):
             drum_stereo[start : start + length, 1] += hit * min(1, 1 + voice_pan)
     elif instrument in ("bass", "lead"):
         events = _events(o, "note")
+        if trace is not None:
+            _tag(events)
+        events = event_variation.mutate(
+            events,
+            "note",
+            total_beats=beats,
+            subdivision=subdivision,
+            seed=int(o.get("seed", 0)),
+            variation=o.get("variation", 0),
+            density=o.get("density", 1),
+        )
         jobs = []
         for e in events:
             jitter = float(o.get("velocity_humanize", 0))
             if not 0 <= jitter <= 1:
                 raise ValueError("velocity_humanize must be 0..1")
+            before = float(e.get("velocity", 1))
             e["velocity"] = float(np.clip(e.get("velocity", 1) + rng.uniform(-jitter, jitter), 0, 1))
-            if rng.random() >= float(e.get("probability", 1)):
+            roll = rng.random()
+            if roll >= float(e.get("probability", 1)):
+                if trace is not None:
+                    _record(
+                        trace,
+                        e,
+                        voice=instrument,
+                        notes=list(e.get("notes") or []),
+                        velocity_in=before,
+                        velocity=e["velocity"],
+                        roll=float(roll),
+                        accepted=False,
+                        frame=None,
+                        reason="probability",
+                    )
                 continue
+            requested = e.get("notes") or [o.get("note", "C2" if instrument == "bass" else "C4")]
             notes = e.get("notes") or [o.get("note", "C2" if instrument == "bass" else "C4")]
             notes = [note_value(note) if not isinstance(note, dict) else note for note in notes]
             if any(not np.isfinite(frequency(note)) or not 0 < frequency(note) < sr / 2 for note in notes):
@@ -386,10 +480,45 @@ def render(instrument, options=None):
                         e, beat=float(e["beat"]) + beat, duration=min(rate, float(e["duration"]) - beat)
                     )
                     note = notes[int(rng.integers(len(notes)))] if arp == "random" else notes[j % len(notes)]
-                    jobs.append((start_of(copy), note, copy))
+                    info = {} if trace is not None else None
+                    jobs.append((start_of(copy, info), note, copy))
+                    if trace is not None:
+                        copy["_record"] = _record(
+                            trace,
+                            copy,
+                            voice=instrument,
+                            notes=[note],
+                            requested_notes=list(requested),
+                            arp_step=j,
+                            velocity_in=before,
+                            velocity=e["velocity"],
+                            roll=float(roll),
+                            accepted=True,
+                            frame=jobs[-1][0],
+                            reason=None,
+                            **info,
+                        )
             else:
-                for note in notes[:1] if instrument == "bass" else notes:
-                    jobs.append((start_of(e), note, e))
+                for k, note in enumerate(notes[:1] if instrument == "bass" else notes):
+                    info = {} if trace is not None else None
+                    jobs.append((start_of(e, info), note, e))
+                    if trace is not None:
+                        record = _record(
+                            trace,
+                            e,
+                            voice=instrument,
+                            notes=[note],
+                            requested_notes=list(requested),
+                            chord_index=k,
+                            velocity_in=before,
+                            velocity=e["velocity"],
+                            roll=float(roll),
+                            accepted=True,
+                            frame=jobs[-1][0],
+                            reason=None,
+                            **info,
+                        )
+                        jobs[-1] = (jobs[-1][0], note, dict(e, _record=record))
         jobs.sort(key=lambda j: j[0])
         active = []
         previous = None
@@ -403,6 +532,8 @@ def render(instrument, options=None):
         scheduled = []
         for start, note, e in jobs:
             if not 0 <= start < n:
+                if "_record" in e:
+                    e["_record"].update(accepted=False, reason="outside_render_window")
                 continue
             gate = max(1, beat_frame(float(e.get("duration", 1 / subdivision)), bpm, sr))
             length = min(n - start, gate + int(max(0, float(o.get("release", 0.12))) * sr))
@@ -410,8 +541,12 @@ def render(instrument, options=None):
             if len(active) >= voices:
                 old = active.pop(0)
                 scheduled[old]["end"] = start
+                if "_record" in scheduled[old]["event"]:
+                    scheduled[old]["event"]["_record"]["voice_stolen_at_frame"] = start
             scheduled.append(dict(start=start, end=start + length, gate=gate, note=note, event=e))
             active.append(len(scheduled) - 1)
+        if trace is not None:
+            return None
         for job in scheduled:
             start = job["start"]
             length = job["end"] - start

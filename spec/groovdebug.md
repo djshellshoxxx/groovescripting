@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved for specification on 2026-10-06. This architecture-dependent feature is planned; the current renderer does not yet retain the complete event provenance it needs.
+Approved for specification on 2026-10-06. Implemented in 0.3.0 (see tests/test_tools.py).
 
 ## Objective
 

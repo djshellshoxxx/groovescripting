@@ -46,6 +46,10 @@ RANGES = {
     "pitch": (10, 20000, False),
     "pitch_envelope": (0, 24, False),
     "tone_noise": (0, 1, False),
+    "variation": (0, 1, False),
+    "density": (0, 1, False),
+    "ghost_notes": (0, 1, False),
+    "fill_every": (0, 128, True),
 }
 
 COMMON = {
@@ -62,6 +66,8 @@ COMMON = {
     "pan",
     "humanize",
     "velocity_humanize",
+    "variation",
+    "density",
 }
 
 NOTE_COMMON = COMMON | {"transpose", "scale", "root"}
@@ -103,6 +109,8 @@ DRUM_ALLOWED = COMMON | {
     "cutoff",
     "resonance",
     "saturation",
+    "ghost_notes",
+    "fill_every",
 }
 BASS_ALLOWED = NOTE_COMMON | SOUND_COMMON | {"pattern", "events"}
 LEAD_ALLOWED = (
@@ -200,9 +208,7 @@ def validate_instrument_params(instrument, params):
         raise ValueError("params must be an object")
     unknown = set(params) - ALLOWED[instrument]
     if unknown:
-        raise ValueError(
-            f"parameters not supported by {instrument}: " + ", ".join(sorted(unknown))
-        )
+        raise ValueError(f"parameters not supported by {instrument}: " + ", ".join(sorted(unknown)))
     validate_common_values(params)
     if instrument == "drum":
         _validate_drum_maps(params)

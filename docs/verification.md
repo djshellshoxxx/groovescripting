@@ -1,4 +1,4 @@
-# GrooveScripting 0.1.0 verification
+# GrooveScripting verification history
 
 Date: 2026-10-03 UTC. Baseline: repository had no branches or source; initialized main at fad5f9f2e9c318e623524fb6f1407c862819a1be. No AGENTS.md or prior project work existed. Specifications were written before their corresponding implementations; module contracts were established before parallel work.
 
@@ -30,3 +30,30 @@ Implementation commit53287ec: Linux and macOS Python3.10/3.12 jobs passed instal
 ## Cross-platform follow-up
 
 Commit45cea2a: all six jobs passed89 tests, lint, examples and distribution builds; Windows PowerShell launchers passed. The Windows documentation generation step exposed another CP1252 default, corrected by explicit UTF-8 HTML output in commit70b85a51a5dd245f05cf30d6718bc315d2201d26. The generated HTML is unchanged on Linux. All six Linux/macOS/Windows Python3.10/3.12 jobs succeeded after the correction, including89 tests per job, lint, smoke recipes, Windows PowerShell launchers, documentation generation and download packaging. Final validation run: https://github.com/djshellshoxxx/groovescripting/actions/runs/37102121703 . Pages build and deployment run37102121693 succeeded. Installable wheel and source distribution links were verified on the live site.
+
+
+## 0.2.0 composition feature verification
+
+Date: 2026-10-06 UTC. This phase adds deterministic pattern variation, project automation lanes, and Standard MIDI File import/export through the ninth console command, `groovmidi`.
+
+Behavioral coverage added:
+- seeded timing/velocity variation, event density, drum ghost notes and periodic fills
+- absolute-beat project automation with linear/step lanes for gain, pan, cutoff and saturation
+- MIDI note/chord import, quantization control, tempo/time-signature validation, section-aware export, transposition, mute/solo behavior and General MIDI percussion export
+- `groovmidi` help/version, Bash launcher and PowerShell launcher coverage
+- persisted variation controls share the same validation ranges as CLI inputs
+
+Local focused evidence on the reconstructed CI source tree:
+- new variation/automation/MIDI suites: **32 passed**
+- adjacent synth/helper/dispatch regression suites: **57 passed**
+- coverage gate suites: **100 passed**, total package coverage **75.53%**, exceeding the configured 70% floor
+- targeted `python -m groovescripting groovmidi --help/--version` regression passed after integrating the command into the shared logging contract
+
+Remote cross-platform evidence for commit `d0863197fd083b02189356378789a84fe73411c9`:
+- GitHub Actions run 37397677493 completed successfully
+- all 15 matrix jobs passed on Ubuntu, Windows and macOS with Python 3.10, 3.11, 3.12, 3.13 and 3.14
+- each matrix job passed Ruff, the full **141-test** pytest suite, smoke recipes, wheel/sdist build, nine-tool reference generation and download packaging
+- Linux passed the Bash composition launcher; Windows passed all PowerShell `groov*.ps1` launchers including `groovmidi.ps1`
+- the separate coverage job passed and the dependency audit job passed
+
+0.2.0 MIDI is intentionally file-oriented and opens no realtime MIDI device. MIDI import currently accepts melodic tracks; percussion-only import is deferred while drum export is supported through General MIDI channel 10. MIDI export does not encode audio-domain automation/effects as MIDI CC. Automation version 1 is limited to gain, pan, cutoff and saturation. The existing low-pass implementation updates filter coefficients in 64-frame blocks, so cutoff automation inherits that DSP resolution while gain, pan and saturation curves are evaluated per sample.

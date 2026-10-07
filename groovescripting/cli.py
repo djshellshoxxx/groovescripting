@@ -1,4 +1,4 @@
-"""Shared CLI dispatcher and configuration resolution for eight tools."""
+"""Shared CLI dispatcher and configuration resolution for every GrooveScripting tool."""
 
 import argparse
 import json
@@ -20,7 +20,28 @@ TOOLS = {
     "groovfx": "fx",
     "groovplay": "play",
     "groovinfo": "info",
+    "groovmidi": "midi",
+    "groovlint": "lint",
+    "groovdebug": "debug",
+    "groovtest": "test",
+    "groovtime": "time",
+    "groovmerge": "merge",
 }
+# Tools whose parser and entry point live in their own module (kind -> module name).
+MODULE_TOOLS = {
+    "midi": "midi",
+    "lint": "lint",
+    "debug": "debug",
+    "test": "musictest",
+    "time": "timeline",
+    "merge": "merge",
+}
+
+
+def module_for(kind):
+    import importlib
+
+    return importlib.import_module("." + MODULE_TOOLS[kind], __package__)
 
 
 class Parser(argparse.ArgumentParser):
@@ -86,6 +107,8 @@ def parser(tool):
     p.add_argument("--log-format", choices=["text", "json"], default="text")
     p.add_argument("--json", action="store_true", help="machine-readable information/status")
     kind = TOOLS[tool]
+    if kind in MODULE_TOOLS:
+        return module_for(kind).parser()
     if kind == "info":
         p.add_argument("input")
         return finish_parser(p, kind)
@@ -96,6 +119,18 @@ def parser(tool):
     p.add_argument("--mute", action="store_true")
     p.add_argument("--system-volume", type=number(0, 1), help="explicitly change OS master volume")
     p.add_argument("--system-unmute", action="store_true", help="explicitly clear OS master mute")
+    p.add_argument(
+        "--visualizer",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="draw an ASCII waveform in the terminal that follows playback (off by default)",
+    )
+    p.add_argument(
+        "--visualizer-height",
+        type=number(3, 40, True),
+        default=9,
+        help="waveform rows for --visualizer",
+    )
     if kind == "play":
         p.add_argument("input", nargs="?")
         p.add_argument("--devices", action="store_true")
@@ -136,6 +171,8 @@ def parser(tool):
         ]:
             if kind != "drum" or name != "transpose":
                 p.add_argument("--" + name, type=number(low, high, integer))
+        p.add_argument("--variation", type=number(0, 1))
+        p.add_argument("--density", type=number(0, 1))
         p.add_argument("--pattern")
         p.add_argument("--events", metavar="PATH")
         if kind != "drum":
@@ -167,6 +204,8 @@ def parser(tool):
             p.add_argument("--tone-noise", type=number(0, 1))
             p.add_argument("--drum-pattern", action="append", default=[], metavar="VOICE=PATTERN")
             p.add_argument("--drum-param", action="append", default=[], metavar="VOICE.KEY=VALUE")
+            p.add_argument("--ghost-notes", type=number(0, 1))
+            p.add_argument("--fill-every", type=number(0, 128, True))
         else:
             p.add_argument("--waveform", choices=["sine", "triangle", "saw", "pulse", "square"])
             for name, lo, hi in [
@@ -338,6 +377,8 @@ def playback(args, data, sr):
         volume=args.volume,
         mute=args.mute,
         repeat=getattr(args, "repeat", 1),
+        visualize=args.visualizer,
+        visualizer_height=args.visualizer_height,
     )
 
 
@@ -351,6 +392,8 @@ def execute(tool, args, logger):
         and not (args.play or args.play_only)
     ):
         raise ValueError("System volume flags require --play or --play-only")
+    if kind not in ("play", "info") and args.visualizer and not (args.play or args.play_only):
+        raise ValueError("--visualizer requires --play or --play-only")
     if kind == "info":
         path = Path(args.input)
         if path.suffix.lower() == ".json":
@@ -376,6 +419,8 @@ def execute(tool, args, logger):
 
         if (args.devices or args.diagnose) and (args.system_volume is not None or args.system_unmute):
             raise ValueError("System volume changes cannot be combined with --devices or --diagnose")
+        if (args.devices or args.diagnose) and args.visualizer:
+            raise ValueError("--visualizer cannot be combined with --devices or --diagnose")
         if args.devices:
             emit(devices.list_devices(), args.json)
         elif args.diagnose:
@@ -396,6 +441,7 @@ def execute(tool, args, logger):
                 volume=0 if args.mute else min(args.volume, 0.1),
                 repeat=args.repeat,
                 channels=args.channels or 1,
+                visualize=args.visualizer,
             )
         elif args.input:
             data, sr = audio.read(args.input)
@@ -599,6 +645,8 @@ def main(argv=None):
         print(__version__)
         return 0
     tool = argv.pop(0)
+    if tool in TOOLS and TOOLS[tool] in MODULE_TOOLS:
+        return module_for(TOOLS[tool]).cli(argv)
     if tool not in TOOLS:
         print("Unknown tool: " + tool, file=sys.stderr)
         return 2

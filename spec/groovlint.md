@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved for specification on 2026-10-06. This is a planned feature, not an implementation claim.
+Approved for specification on 2026-10-06. Implemented in 0.3.0 (see tests/test_tools.py).
 
 ## Objective
 

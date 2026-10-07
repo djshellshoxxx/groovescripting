@@ -44,3 +44,19 @@ def configure(path=None, level="info", log_format="text"):
 def close(logger, handler):
     logger.removeHandler(handler)
     handler.close()
+
+
+def add_arguments(parser):
+    """Shared opt-in logging flags for every tool."""
+    parser.add_argument("--log-file", metavar="PATH", help="append troubleshooting logs to a UTF-8 file")
+    parser.add_argument("--log-level", choices=["debug", "info", "warning", "error"], default="info")
+    parser.add_argument("--log-format", choices=["text", "json"], default="text")
+
+
+def start(args, tool):
+    """Validate logging flags and open the logger; callers must close() the handler."""
+    if not args.log_file and (args.log_level != "info" or args.log_format != "text"):
+        raise ValueError("--log-level and --log-format require --log-file")
+    logger, handler = configure(args.log_file, args.log_level, args.log_format)
+    logger.info("Starting %s", tool)
+    return logger, handler

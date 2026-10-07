@@ -33,6 +33,10 @@ DESCRIPTIONS = {
     "transpose": "Pitch shift in semitones.",
     "humanize": "Random timing variation in seconds.",
     "velocity_humanize": "Random velocity variation.",
+    "variation": "Seeded timing and velocity mutation strength.",
+    "density": "Probability of retaining existing pattern events.",
+    "ghost_notes": "Drum-only probability of inserting low-velocity hits.",
+    "fill_every": "Drum-only fill interval in bars; 0 disables fills.",
     "scale": "Quantize notes to selected scale.",
     "root": "Scale root as a note name.",
     "preset": "Built-in preset name or version 1 JSON preset file.",
@@ -79,6 +83,8 @@ DESCRIPTIONS = {
     "mute": "Mute application playback.",
     "system_volume": "Explicitly request OS master volume change.",
     "system_unmute": "Explicitly request OS master unmute.",
+    "visualizer": "Show (or with --no-visualizer hide) a live ASCII waveform during playback.",
+    "visualizer_height": "Waveform rows drawn by --visualizer.",
     "tail": "cut truncates to loop; full retains release; wrap folds tails into loop.",
     "effect": "Repeat JSON effect objects to build an ordered effects chain.",
     "normalize": "Scale peak to 0.95 (mix uses 1.0).",
@@ -99,6 +105,9 @@ DESCRIPTIONS = {
     "diagnose": "Report playback backend availability.",
     "test_tone": "Play an internally generated test tone.",
     "repeat": "Playback repetition count.",
+    "action": "MIDI interchange action: import or export.",
+    "instrument": "Instrument assigned to imported melodic MIDI tracks.",
+    "no_quantize": "Preserve imported MIDI beat fractions instead of quantizing.",
     "version": "Print package version and exit.",
     "help": "Print command usage and exit.",
 }
@@ -118,8 +127,17 @@ def bounds(action):
 parts = []
 for tool, kind in TOOLS.items():
     rows = []
-    for a in parser(tool)._actions:
-        flags = ", ".join(a.option_strings) if a.option_strings else a.dest.upper()
+    tool_parser = parser(tool)
+    entries = [("", action) for action in tool_parser._actions]
+    subcommands = next(
+        (action for action in tool_parser._actions if isinstance(action, argparse._SubParsersAction)), None
+    )
+    if subcommands is not None:
+        entries = [("", action) for action in tool_parser._actions if action is not subcommands]
+        for command, subparser in subcommands.choices.items():
+            entries.extend((command + " ", action) for action in subparser._actions if action.dest != "help")
+    for prefix, a in entries:
+        flags = prefix + (", ".join(a.option_strings) if a.option_strings else a.dest.upper())
         default = a.default
         if default is None and kind in ("drum", "bass", "lead"):
             default = presets.DEFAULTS.get(
@@ -131,6 +149,14 @@ for tool, kind in TOOLS.items():
             default = "—"
         choice = ", ".join(map(str, a.choices)) if a.choices is not None else bounds(a)
         meaning = DESCRIPTIONS.get(a.dest, a.help or "See command help.")
+        if kind == "midi" and prefix == "import " and a.dest == "input":
+            meaning = "Standard MIDI File to convert into a GrooveScripting project."
+        if kind == "midi" and prefix == "export " and a.dest == "input":
+            meaning = "Version 1 GrooveScripting project to export as Standard MIDI."
+        if kind == "midi" and prefix == "import " and a.dest == "output":
+            meaning = "Destination project JSON path."
+        if kind == "midi" and prefix == "export " and a.dest == "output":
+            meaning = "Destination Standard MIDI File path."
         if kind == "fx" and a.dest == "preset":
             meaning = "Version 1 effect-chain JSON preset file."
         if kind == "mix" and a.dest == "sample_rate":
@@ -170,4 +196,4 @@ effects = """<section id="effects"><h2>Effect object reference</h2><p>Pass each 
     + '</main><p id="copy-status" role="status" class="toast"></p></body></html>',
     encoding="utf-8",
 )
-print("Generated complete reference for eight tools")
+print(f"Generated complete reference for {len(TOOLS)} tools")
