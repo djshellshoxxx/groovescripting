@@ -1,7 +1,7 @@
 # CLI, presets and troubleshooting specification (v1)
 
 ## Commands and shared dispatch
-Nine entry points: groovdrm, groovbss, groovld, groovmix, groovseq, groovfx, groovplay, groovinfo and groovmidi. `python -m groovescripting TOOL ...` is the portable fallback. Help and version always work without loading playback adapters. All invocations return 0 on success, 2 for input/schema/argument errors, 1 for runtime/IO/backend failures, 130 on user interruption.
+Fourteen entry points: groovdrm, groovbss, groovld, groovmix, groovseq, groovfx, groovplay, groovinfo, groovmidi, and the 0.3.0 developer tools groovlint, groovdebug, groovtest, groovtime and groovmerge (see their own specs). `python -m groovescripting TOOL ...` is the portable fallback. Help and version always work without loading playback adapters. All invocations return 0 on success, 2 for input/schema/argument errors, 1 for runtime/IO/backend failures, 130 on user interruption.
 
 ## Configuration precedence
 Parse command arguments with optional values unset. Resolve built-in defaults, then version 1 preset parameters, then project parameters, then explicit CLI values. Unknown preset keys fail. Preset JSON has `version:1`, `instrument:drum|bass|lead`, `name`, `params` object. Save resolved sound and musical values with overwrite protection. Built-ins: electronic, dance, breakbeat, experimental percussion; sub, plucked, acid, aggressive bass; pluck, sustained, soft_chord, experimental lead. Listing/inspection does not render.

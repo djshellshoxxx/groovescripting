@@ -45,6 +45,11 @@ Use `examples/arrangement.json` for a section based arrangement. Protect existin
 | `groovplay` | Playback, device listing and diagnostics |
 | `groovinfo` | WAV metadata and signal statistics |
 | `groovmidi` | MIDI project import/export |
+| `groovlint` | Project, preset and audio checks with stable rule IDs |
+| `groovdebug` | Step through an arrangement's events and ask why each one played |
+| `groovtest` | Musical assertions over a project's event trace |
+| `groovtime` | Inspect, render and diff earlier Git revisions of a project |
+| `groovmerge` | Semantic three-way merge of project files |
 
 Use `--variation` and `--density` on synth commands for seeded pattern mutation; drums also support `--ghost-notes` and `--fill-every`. Project tracks support gain, pan, cutoff and saturation automation lanes. `groovmidi import` converts melodic MIDI into a project and `groovmidi export` writes project arrangements as Standard MIDI Files.
 
@@ -53,6 +58,23 @@ groovdrm --preset breakbeat --bars 4 --variation 0.3 --ghost-notes 0.08 --fill-e
 groovmidi import phrase.mid --output phrase.json --instrument lead
 groovmidi export examples/arrangement.json --output arrangement.mid
 ```
+
+## Musical developer tools
+
+```sh
+groovlint examples/arrangement.json --audio groove.wav --strict
+groovdebug examples/arrangement.json --break 2 --where 'track == "Bass" and velocity < 0.8'
+groovdebug examples/arrangement.json --format json --trace-out arrangement.trace.jsonl
+groovtest my-suite.json
+groovtime log song.json && groovtime diff song.json --from HEAD~1 --to WORKTREE
+groovmerge base.json mine.json theirs.json --output merged.json --take track:Bass=theirs
+```
+
+Every event in a trace records its source JSON Pointer, section and repeat, and each decision applied to it (probability roll, swing, humanize, velocity humanize, variation, scale/arpeggio resolution and voice limits). Tracing never changes audio. Specs: `spec/groovlint.md`, `spec/groovdebug.md`, `spec/groovtest.md`, `spec/groovtime.md`, `spec/groovmerge.md`, `spec/provenance.md`.
+
+## Standalone executables
+
+Each GitHub Release includes `groovescripting-windows-x64.exe` and `groovescripting-linux-x64` built with PyInstaller; no Python installation is needed. Run any tool as the first argument, for example `groovescripting-windows-x64.exe groovseq project.json --output song.wav`. Copy or rename the file to a tool name (for example `groovseq.exe`) to run that tool directly. On Linux, `chmod +x groovescripting-linux-x64` first; playback needs `libportaudio2`.
 
 Automation lanes live on a project track and use absolute arrangement beats:
 

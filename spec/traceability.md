@@ -109,3 +109,15 @@ Source: the complete implementation request attached on 2026-10-03 and the addit
 ## Final audit resolutions and evidence
 
 All material audit findings were corrected: nested drum schemas/ranges validate before allocation; track/preset humanization persists unless a global override exists; cumulative section clocks prevent rounding drift; CLI presets cannot supersede explicit voice/pattern flags; unknown effects properties reject; bass rejects lead-only flags; device dispatch honors conversions/mute/repeat; stems are globally selected, padded and explicitly pre-master. Relevant regressions are in test_synth.py, test_cli.py, test_dispatch.py and test_helpers.py. Final executed outcomes and remaining external hardware/browser/publication boundaries are recorded in docs/verification.md. Optional playground omitted by design, as permitted in the request.
+
+## 0.3.0 developer tool traceability
+
+| ID | Requirement / feature | Specification / implementation | Verification |
+| --- | --- | --- | --- |
+| D01 | Event trace and provenance without audio change | spec/provenance.md; trace.py, synth.render trace, projects.expand | tests/test_tools.py trace determinism, provenance, render-equivalence, JSONL |
+| D02 | groovlint rules PRJ001-004, AUD001-006, thresholds, exit codes | spec/groovlint.md; lint.py | tests/test_tools.py lint project/audio/threshold/CLI tests |
+| D03 | groovdebug breakpoints, commands, JSON, protected trace | spec/groovdebug.md; debug.py, expr.py | tests/test_tools.py debug and grammar tests |
+| D04 | groovtest musical assertions | spec/groovtest.md; musictest.py | tests/test_tools.py musical assertions |
+| D05 | groovtime log/show/render/diff over Git states | spec/groovtime.md; timeline.py | tests/test_tools.py time history test |
+| D06 | groovmerge semantic three-way merge | spec/groovmerge.md; merge.py | tests/test_tools.py merge test |
+| D07 | Standalone Windows/Linux executables in Releases | .github/workflows/release.yml; scripts/standalone.py | Release workflow run |
