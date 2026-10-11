@@ -1,6 +1,5 @@
 """Standard MIDI File import/export for GrooveScripting projects."""
 
-import argparse
 import copy
 import json
 import math
@@ -50,7 +49,10 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
     if isinstance(subdivision, bool) or not isinstance(subdivision, int) or not 1 <= subdivision <= 64:
         raise ValueError("subdivision must be an integer within [1, 64]")
 
-    source = mido.MidiFile(path)
+    try:
+        source = mido.MidiFile(path)
+    except (EOFError, KeyError, IndexError, ValueError) as error:
+        raise ValueError(f"not a readable Standard MIDI File: {path} ({error or type(error).__name__})") from error
     ticks_per_beat = source.ticks_per_beat
     tempos = []
     signatures = []
@@ -167,7 +169,7 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
     return project
 
 
-def _resolved_track(original, overrides, project, sequence, index, bars):
+def _resolved_track(original, overrides, project, sequence, index, bars, variation=0):
     track = copy.deepcopy(original)
     if "params" not in track:
         track["params"] = {}
@@ -182,7 +184,7 @@ def _resolved_track(original, overrides, project, sequence, index, bars):
         bars=bars,
         beats=project.get("beats", 4),
         subdivision=project.get("subdivision", 4),
-        seed=project.get("seed", 0) + sequence * 1009 + index * 9176,
+        seed=project.get("seed", 0) + sequence * 1009 + index * 9176 + variation,
     )
     if "pattern" in track:
         params["pattern"] = track["pattern"]
@@ -229,7 +231,7 @@ def _drum_events(params, total_beats):
 
 
 def _midi_note(value, transpose=0):
-    parsed = note_value(value)
+    parsed = value if isinstance(value, dict) else note_value(value)
     if isinstance(parsed, dict):
         raise ValueError("arbitrary Hz notes cannot be exported to MIDI without pitch bend")
     note = int(round(float(parsed) + float(transpose)))
@@ -269,7 +271,11 @@ def export_file(project, path, overwrite=False, ticks_per_beat=480):
             selected = []
             for original in project["tracks"]:
                 overrides = section.get("tracks", {}).get(original["name"], {})
-                selected.append(_resolved_track(original, overrides, project, sequence, len(selected), bars))
+                selected.append(
+                    _resolved_track(
+                        original, overrides, project, sequence, len(selected), bars, section.get("variation", 0)
+                    )
+                )
             solo = any(track.get("solo", False) and not track.get("mute", False) for track, _ in selected)
 
             for track_index, (track, params) in enumerate(selected):
@@ -363,7 +369,9 @@ def export_file(project, path, overwrite=False, ticks_per_beat=480):
 
 
 def parser():
-    p = argparse.ArgumentParser(prog="groovmidi", description="GrooveScripting MIDI file interchange")
+    from .cli import Parser
+
+    p = Parser(prog="groovmidi", description="GrooveScripting MIDI file interchange")
     p.add_argument("--version", action="version", version=__version__)
     p.add_argument("--log-file", metavar="PATH", help="append troubleshooting logs to a UTF-8 file")
     p.add_argument("--log-level", choices=["debug", "info", "warning", "error"], default="info")
@@ -386,12 +394,13 @@ def parser():
 
 
 def cli(argv=None):
-    args = parser().parse_args(argv)
+    from .cli import early_logs
+
+    argv = list(sys.argv[1:] if argv is None else argv)
     logger = handler = None
     try:
-        if not args.log_file and (args.log_level != "info" or args.log_format != "text"):
-            raise ValueError("--log-level and --log-format require --log-file")
-        logger, handler = diagnostics.configure(args.log_file, args.log_level, args.log_format)
+        logger, handler = early_logs(argv)
+        args = parser().parse_args(argv)
         logger.info("Starting groovmidi %s", args.action)
         if args.action == "import":
             project = import_file(
@@ -406,6 +415,10 @@ def cli(argv=None):
             export_file(project, args.output, overwrite=args.overwrite)
         logger.info("Completed groovmidi %s", args.action)
         return 0
+    except KeyboardInterrupt:
+        if logger:
+            logger.warning("Interrupted groovmidi")
+        return 130
     except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
         if logger:
             logger.exception("Invalid input: %s", error)

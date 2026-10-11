@@ -249,8 +249,13 @@ def parser(tool):
         p.add_argument("--stems", metavar="DIRECTORY")
     elif kind == "mix":
         p.add_argument("inputs", nargs="+")
-        for name in ["track-gain", "track-pan", "track-offset", "trim"]:
-            p.add_argument("--" + name, type=float, action="append", default=[])
+        for name, lo, hi in [
+            ("track-gain", 0, 16),
+            ("track-pan", -1, 1),
+            ("track-offset", -3600, 3600),
+            ("trim", 0, 86400),
+        ]:
+            p.add_argument("--" + name, type=number(lo, hi), action="append", default=[])
         p.add_argument("--stems", metavar="DIRECTORY")
         p.add_argument(
             "--track-mute", action="append", type=number(1, 10000, True), default=[], metavar="INDEX"
@@ -337,7 +342,11 @@ def render_options(args, kind):
                 }
             ):
                 raise ValueError("--drum-param requires VOICE.KEY=VALUE with a supported parameter")
-            params.setdefault(voice, {})[key] = float(value)
+            try:
+                number_value = float(value)
+            except ValueError:
+                raise ValueError(f"--drum-param {item}: VALUE must be a number") from None
+            params.setdefault(voice, {})[key] = number_value
         if params:
             overrides["drum_params"] = params
     result = presets.resolve(kind, args.preset, overrides)
@@ -542,6 +551,7 @@ def execute(tool, args, logger):
                 raise ValueError("Effect preset requires version 1 and effects array")
             fx_chain = preset["effects"] + fx_chain
         if args.save_preset:
+            effects.validate(fx_chain)
             with Path(args.save_preset).open("w" if args.overwrite else "x", encoding="utf-8") as stream:
                 json.dump({"version": 1, "effects": fx_chain}, stream, indent=2)
         if args.sample_rate and args.sample_rate != sr:
@@ -573,13 +583,15 @@ def execute(tool, args, logger):
     )
     if clipping:
         print(
-            f"Output exceeds digital full scale ({clipping} samples); integer exports clip. Use --limit or --normalize.",
+            f"Output exceeds digital full scale ({clipping} samples); integer exports and playback clip. Use --limit or --normalize.",
             file=sys.stderr,
         )
     output = args.output or tool + ".wav"
     fmt = args.format or ("flac" if Path(output).suffix.lower() == ".flac" else "wav")
     if fmt == "flac" and args.subtype == "FLOAT":
         raise ValueError("FLAC does not support FLOAT; select PCM_16 or PCM_24")
+    if args.play_only and getattr(args, "stems", None):
+        raise ValueError("--stems writes files and cannot be combined with --play-only")
     if not args.play_only:
         audio.write(output, data, sr, overwrite=args.overwrite, format=fmt, subtype=args.subtype)
     if getattr(args, "stems", None):
@@ -589,7 +601,7 @@ def execute(tool, args, logger):
             safe = "".join(char if char.isalnum() or char in "_-" else "_" for char in name)
             audio.write(directory / (safe + ".wav"), stem, sr, overwrite=args.overwrite)
     if args.play or args.play_only:
-        playback(args, data, sr)
+        playback(args, np.clip(data, -1, 1) if clipping else data, sr)
     elif args.system_volume is not None or args.system_unmute:
         raise ValueError("System volume flags require --play or --play-only for rendering commands")
     emit(

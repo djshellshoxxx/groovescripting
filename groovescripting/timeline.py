@@ -6,6 +6,8 @@ the engine path used for the current file. Nothing in the repository or working 
 """
 
 import argparse
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -18,6 +20,15 @@ from . import __version__, diagnostics, trace
 from .projects import validate
 
 WORKTREE = "WORKTREE"
+REVISION_ERRORS = (
+    "unknown revision",
+    "invalid object name",
+    "bad revision",
+    "bad object",
+    "does not exist in",
+    "exists on disk, but not in",
+    "not a valid object name",
+)
 COMPARED = ("notes", "velocity", "accepted", "duration", "probability", "bar", "beat")
 
 
@@ -28,7 +39,12 @@ def _git(directory, *args):
         ["git", "-C", str(directory), *args], capture_output=True, text=True, encoding="utf-8", check=False
     )
     if result.returncode:
-        raise ValueError(result.stderr.strip() or f"git {' '.join(args)} failed")
+        message = result.stderr.strip() or f"git {' '.join(args)} failed"
+        # A revision (or a path within it) that does not exist is invalid user input: exit 2.
+        # Everything else (not a repository, unreadable directory, git failure) is exit 1.
+        if any(marker in message.lower() for marker in REVISION_ERRORS):
+            raise ValueError(message)
+        raise RuntimeError(message)
     return result.stdout
 
 
@@ -125,18 +141,42 @@ def parser():
 
 
 def cli(argv=None):
-    args = parser().parse_args(argv)
+    from .cli import early_logs
+
+    argv = list(sys.argv[1:] if argv is None else argv)
+    logger = handler = None
     try:
-        logger, handler = diagnostics.start(args, "groovtime")
-    except (ValueError, OSError) as error:
-        print(f"groovtime: {error}", file=sys.stderr)
-        return 2
-    try:
+        try:
+            logger, handler = early_logs(argv)
+        except (ValueError, OSError) as error:
+            print(f"groovtime: {error}", file=sys.stderr)
+            return 2
+        logger.info("Starting groovtime")
+        args = _parse(parser(), argv, logger)
         status = _run(args)
         logger.info("Completed groovtime status=%s", status)
         return status
+    except KeyboardInterrupt:
+        if logger:
+            logger.warning("Interrupted groovtime")
+        return 130
     finally:
-        diagnostics.close(logger, handler)
+        if logger and handler:
+            diagnostics.close(logger, handler)
+
+
+def _parse(argument_parser, argv, logger):
+    """parse_args, logging argparse errors before re-raising its SystemExit."""
+    captured = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(captured):
+            return argument_parser.parse_args(argv)
+    except SystemExit as stop:
+        if stop.code not in (0, None):
+            logger.error("Invalid arguments: %s", captured.getvalue().strip())
+        raise
+    finally:
+        sys.stderr.write(captured.getvalue())
 
 
 def _run(args):

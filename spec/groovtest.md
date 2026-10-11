@@ -28,7 +28,8 @@ Exit codes: 0 all assertions passed, 1 at least one failed, 2 invalid suite/proj
 }
 ~~~
 
-- `project` is relative to the suite file. `seed` (optional) overrides the project seed; `--seed` overrides both.
+- `project` is relative to the suite file. `seed` (optional) overrides the project seed; `--seed` overrides both. Each suite produces one trace, so `seed` is a suite-level key only; a per-test `seed` is rejected as an unknown key (exit 2).
+- Several suites may be given; each is evaluated against its own project and seed. JSON output is a single report for one suite and a list of reports for several.
 - Each test has a unique `name`, an optional `where` predicate selecting trace records, and exactly one check: `count` (`min`/`max`/`eq` nonnegative integers), `all` (every selected record satisfies the predicate), `none` (no selected record satisfies it) or `fingerprint` (run fingerprint equals the value).
 - Predicates use the safe grammar shared with groovdebug (`groovescripting/expr.py`): fields track, voice, instrument, section, origin, event_id, bar, beat, note, velocity (0..1), probability, duration, frame, accepted, accent; operators == != < <= > >=; and/or/not; parentheses. No evaluation of code.
 - Failures list up to 20 offending event IDs with track, bar and beat.
