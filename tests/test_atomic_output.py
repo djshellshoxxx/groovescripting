@@ -5,7 +5,7 @@ from pathlib import Path
 import mido
 import pytest
 
-from groovescripting import midi, projects
+from groovescripting import audio, midi, presets, projects
 
 
 def _project():
@@ -56,3 +56,33 @@ def test_midi_export_failure_leaves_no_partial_new_output(tmp_path, monkeypatch)
     with pytest.raises(OSError, match="interrupted"):
         midi.export_file(_project(), destination)
     assert not destination.exists()
+
+
+def test_audio_export_preserves_previous_file_on_encoder_failure(tmp_path, monkeypatch):
+    import numpy as np
+
+    destination = tmp_path / "mix.wav"
+    destination.write_bytes(b"ORIGINAL AUDIO DATA")
+
+    def fail_encode(filename, *args, **kwargs):
+        Path(filename).write_bytes(b"partial WAV")
+        raise OSError("simulated interrupted WAV encoding")
+
+    monkeypatch.setattr(audio.sf, "write", fail_encode)
+    with pytest.raises(OSError, match="interrupted"):
+        audio.write(destination, np.zeros((100, 2)), 44100, overwrite=True)
+    assert destination.read_bytes() == b"ORIGINAL AUDIO DATA"
+
+
+def test_preset_save_preserves_previous_file_on_encoder_failure(tmp_path, monkeypatch):
+    destination = tmp_path / "bass.json"
+    destination.write_bytes(b"ORIGINAL PRESET DATA")
+
+    def fail_encode(obj, stream, *args, **kwargs):
+        stream.write("partial preset")
+        raise OSError("simulated interrupted preset encoding")
+
+    monkeypatch.setattr(presets.json, "dump", fail_encode)
+    with pytest.raises(OSError, match="interrupted"):
+        presets.save(destination, "bass", {"waveform": "sine"}, overwrite=True)
+    assert destination.read_bytes() == b"ORIGINAL PRESET DATA"
