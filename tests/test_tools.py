@@ -135,6 +135,19 @@ def test_expression_grammar_and_rejections():
 # groovdebug --------------------------------------------------------------------------------------
 
 
+def test_expression_limits_deeply_nested_input():
+    for expression in (
+        "not " * 1000 + "bar == 1",
+        "(" * 1000 + "bar == 1" + ")" * 1000,
+        "not (" * 1000 + "bar == 1" + ")" * 1000,
+    ):
+        with pytest.raises(expr.ExpressionError, match="nesting"):
+            expr.compile_expression(expression)
+
+    shallow = "(" * 20 + "bar == 1" + ")" * 20
+    assert expr.compile_expression(shallow)({"bar": 1})
+
+
 def test_debug_json_breakpoints_and_commands(tmp_path):
     path = write(tmp_path / "p.json", project())
     before = path.read_bytes()
