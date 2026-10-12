@@ -10,6 +10,7 @@ from pathlib import Path
 import mido
 
 from . import __version__, diagnostics, presets
+from .atomic import write_atomic
 from .music import note_value
 from .projects import load as load_project
 from .projects import save as save_project
@@ -364,8 +365,7 @@ def export_file(project, path, overwrite=False, ticks_per_beat=480):
             last_tick = tick
         midi_track.append(mido.MetaMessage("end_of_track", time=0))
 
-    midi_file.save(destination)
-    return destination
+    return write_atomic(destination, midi_file.save, overwrite=overwrite)
 
 
 def parser():
