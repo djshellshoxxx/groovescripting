@@ -86,3 +86,19 @@ def test_preset_save_preserves_previous_file_on_encoder_failure(tmp_path, monkey
     with pytest.raises(OSError, match="interrupted"):
         presets.save(destination, "bass", {"waveform": "sine"}, overwrite=True)
     assert destination.read_bytes() == b"ORIGINAL PRESET DATA"
+
+
+def test_effect_preset_save_preserves_previous_file_on_failed_write(tmp_path, monkeypatch):
+    destination = tmp_path / "effects.json"
+    destination.write_bytes(b"ORIGINAL EFFECTS")
+
+    original_write = Path.write_text
+
+    def fail_write(self, text, *args, **kwargs):
+        original_write(self, "partial effects", *args, **kwargs)
+        raise OSError("simulated interrupted effect preset write")
+
+    monkeypatch.setattr(Path, "write_text", fail_write)
+    with pytest.raises(OSError, match="interrupted"):
+        presets.save_effects(destination, [{"type": "gain", "db": -3}], overwrite=True)
+    assert destination.read_bytes() == b"ORIGINAL EFFECTS"
