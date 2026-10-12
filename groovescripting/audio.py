@@ -1,11 +1,12 @@
 """Validated audio buffers, encoding, resampling and aligned mixing."""
 
 from math import gcd
-from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 from scipy.signal import resample_poly
+
+from .atomic import write_atomic
 
 
 def buffer(data):
@@ -29,13 +30,15 @@ def read(path):
 
 
 def write(path, data, sr, overwrite=False, format="wav", subtype="PCM_16"):
-    p = Path(path)
-    if p.exists() and not overwrite:
-        raise FileExistsError(f"output already exists: {p}")
     fmt = format.upper()
     if fmt not in ("WAV", "FLAC") or not sf.check_format(fmt, subtype):
         raise ValueError("unsupported output format/subtype")
-    sf.write(str(p), buffer(data), rate(sr), format=fmt, subtype=subtype)
+    samples, sample_rate = buffer(data), rate(sr)
+    write_atomic(
+        path,
+        lambda temporary: sf.write(str(temporary), samples, sample_rate, format=fmt, subtype=subtype),
+        overwrite=overwrite,
+    )
 
 
 def info(path):

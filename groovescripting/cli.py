@@ -551,9 +551,7 @@ def execute(tool, args, logger):
                 raise ValueError("Effect preset requires version 1 and effects array")
             fx_chain = preset["effects"] + fx_chain
         if args.save_preset:
-            effects.validate(fx_chain)
-            with Path(args.save_preset).open("w" if args.overwrite else "x", encoding="utf-8") as stream:
-                json.dump({"version": 1, "effects": fx_chain}, stream, indent=2)
+            presets.save_effects(args.save_preset, fx_chain, overwrite=args.overwrite)
         if args.sample_rate and args.sample_rate != sr:
             data, _ = audio.mix(
                 [{"data": data, "sample_rate": sr}], args.sample_rate, args.channels or data.shape[1]

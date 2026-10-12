@@ -1,0 +1,99 @@
+name: Windows v0.3.1 beta 1
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-beta.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-beta-v0.3.1b1
+  cancel-in-progress: false
+
+jobs:
+  windows-qa-and-build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install and verify Python source
+        run: |
+          python -m pip install ".[dev,playback]" "pyinstaller>=6.10,<7"
+          python -m ruff check groovescripting tests scripts examples
+          python -m pytest
+          python examples/smoke.py --output-dir smoke-output
+      - name: Build single-file Windows executable
+        shell: bash
+        run: >
+          pyinstaller --onefile --clean --noconfirm
+          --name groovescripting
+          --paths .
+          --collect-submodules groovescripting
+          --collect-all soundfile
+          --collect-all sounddevice
+          --collect-data mido
+          scripts/standalone.py
+      - name: Smoke test the actual Windows executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          exe=dist/groovescripting.exe
+          "$exe" --version
+          "$exe" groovseq examples/first-groove.json --output beta-smoke.wav
+          "$exe" groovinfo beta-smoke.wav --json
+          "$exe" groovlint examples/arrangement.json --audio beta-smoke.wav
+          "$exe" groovdebug examples/arrangement.json --format json --break 2 > /dev/null
+          "$exe" groovmidi export examples/arrangement.json --output arrangement.mid
+          "$exe" groovmidi import arrangement.mid --output imported.json --instrument lead
+          "$exe" groovmerge examples/arrangement.json examples/arrangement.json examples/arrangement.json --output merged.json
+          "$exe" groovtime log examples/arrangement.json > /dev/null
+          "$exe" groovplay --diagnose
+          for tool in groovdrm groovbss groovld groovmix groovseq groovfx groovplay groovinfo groovmidi groovlint groovdebug groovtest groovtime groovmerge; do
+            "$exe" "$tool" --help > /dev/null
+          done
+          "$exe" groovdrm --preset breakbeat --bars 1 --limit --output drums.wav
+          "$exe" groovfx drums.wav --effect '{"type":"gain","db":-3}' --output drums-fx.wav
+          cp "$exe" groovseq.exe
+          ./groovseq.exe --version
+          mv "$exe" dist/groovescripting-windows-x64.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: groovescripting-windows-x64
+          path: dist/groovescripting-windows-x64.exe
+          if-no-files-found: error
+
+  publish-beta:
+    needs: windows-qa-and-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m pip install "build>=1,<2"
+          python -m build
+      - uses: actions/download-artifact@v4
+        with:
+          name: groovescripting-windows-x64
+          path: release-assets
+      - name: Publish validated Windows beta as a GitHub prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=v0.3.1b1
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Refusing to overwrite an existing beta release: $tag" >&2
+            exit 1
+          fi
+          test -s release-assets/groovescripting-windows-x64.exe
+          gh release create "$tag" release-assets/groovescripting-windows-x64.exe dist/*             --target "$GITHUB_SHA"             --title "GrooveScripting v0.3.1 beta 1 (Windows)"             --notes-file .github/release-notes.md             --prerelease

@@ -16,7 +16,7 @@ def test_every_tool_has_a_site_card_and_launchers():
 
 
 def test_distribution_links_match_package_version():
-    versions = set(re.findall(r"downloads/groovescripting-([0-9.]+?)(?:-py3-none-any\.whl|\.tar\.gz)", INDEX))
+    versions = set(re.findall(r"downloads/groovescripting-([0-9A-Za-z.]+?)(?:-py3-none-any\.whl|\.tar\.gz)", INDEX))
     assert versions == {__version__}
 
 

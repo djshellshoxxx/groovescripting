@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from . import automation
+from .atomic import write_atomic
 from .audio import buffer, mix, rate
 from .music import beat_frame
 from .validation import validate_common_values, validate_instrument_params
@@ -136,10 +137,11 @@ def load(path):
 
 def save(path, project, overwrite=False):
     validate(project)
-    p = Path(path)
-    if p.exists() and not overwrite:
-        raise FileExistsError(str(p))
-    p.write_text(json.dumps(project, indent=2) + "\n", encoding="utf-8")
+    write_atomic(
+        path,
+        lambda temporary: temporary.write_text(json.dumps(project, indent=2) + "\n", encoding="utf-8"),
+        overwrite=overwrite,
+    )
 
 
 def expand(project, tail="cut"):
@@ -267,8 +269,13 @@ def render_project(project, render_fn, tail="cut", automation_fn=None):
         chunk = np.zeros((target, channels))
         for name in stem_chunks:
             stem = rendered[name]
-            padded = np.zeros_like(chunk)
-            padded[: len(stem)] = stem
+            # Most stems already match the section length. Reuse their buffer rather
+            # than allocating and copying another full-size array for every track.
+            if len(stem) == target:
+                padded = stem
+            else:
+                padded = np.zeros_like(chunk)
+                padded[: len(stem)] = stem
             stem_chunks[name].append(padded)
             chunk += padded
         chunks.append(chunk)
