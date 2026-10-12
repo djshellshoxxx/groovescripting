@@ -1,8 +1,6 @@
 """Validated audio buffers, encoding, resampling and aligned mixing."""
 
 from math import gcd
-from pathlib import Path
-
 import numpy as np
 import soundfile as sf
 from scipy.signal import resample_poly
