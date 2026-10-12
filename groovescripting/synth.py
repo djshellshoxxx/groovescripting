@@ -122,7 +122,7 @@ def _events(o, kind):
                     if frequency(parsed) >= int(o.get("sample_rate", 44100)) / 2:
                         raise ValueError("Event frequency must be below Nyquist")
         return [dict(e) for e in events]
-    pattern = str(o.get("pattern", "x...x...x...x..." if kind == "drum" else "C2 . . . C2 . G2 ."))
+    pattern = str(o.get("pattern", "x...x...x...x..." if kind == "drum" else "C2 . . . C2 . G2 .")).strip()
     tokens = (
         len(pattern)
         if kind == "drum" and re.fullmatch(r"[xX.\-]+", pattern)
@@ -276,7 +276,7 @@ def render(instrument, options=None, trace=None):
         beat = float(e["beat"])
         index = int(np.floor(beat * subdivision + 0.5))
         swung = swing / (2 * subdivision) if index % 2 else 0
-        shift = int(rng.uniform(-humanize, humanize) * sr)
+        shift = int(round(rng.uniform(-humanize, humanize) * sr))
         frame = beat_frame(beat + offset + swung, bpm, sr)
         if info is not None:
             info.update(swing_beats=swung, humanize_frames=shift, resolved_beat=beat + offset + swung)
@@ -558,7 +558,7 @@ def render(instrument, options=None, trace=None):
             freq = np.full(length, target)
             glide = max(0, float(o.get("glide", 0)))
             legato = bool(o.get("legato", False)) and start < previous_end
-            if voices == 1 and previous is not None and glide:
+            if (instrument == "bass" or mode == "mono") and previous is not None and glide:
                 frac = np.minimum(t / glide, 1)
                 freq = previous * (target / previous) ** frac
             freq *= 2 ** (float(o.get("detune", 0)) / 1200)

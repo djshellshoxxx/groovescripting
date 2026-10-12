@@ -2,6 +2,8 @@ name: Release standalone executables
 on:
   push:
     tags: ['v*']
+    branches: ['claude/**']
+  pull_request:
   workflow_dispatch:
     inputs:
       tag:
@@ -50,6 +52,18 @@ jobs:
           "$exe" groovinfo smoke.wav --json
           "$exe" groovlint examples/arrangement.json --audio smoke.wav
           "$exe" groovdebug examples/arrangement.json --format json --break 2 > /dev/null
+          for tool in groovdrm groovbss groovld groovmix groovseq groovfx groovplay groovinfo groovmidi groovlint groovdebug groovtest groovtime groovmerge; do
+            "$exe" "$tool" --help > /dev/null
+          done
+          "$exe" groovdrm --preset breakbeat --bars 1 --limit --output drums.wav
+          "$exe" groovfx drums.wav --effect '{"type":"gain","db":-3}' --output drums-fx.wav
+          "$exe" groovmidi export examples/arrangement.json --output arrangement.mid
+          "$exe" groovmidi import arrangement.mid --output imported.json --instrument lead
+          "$exe" groovmerge examples/arrangement.json examples/arrangement.json examples/arrangement.json --output merged.json
+          "$exe" groovtime log examples/arrangement.json > /dev/null
+          "$exe" groovplay --diagnose
+          cp "$exe" "groovseq${exe##*groovescripting}"
+          "./groovseq${exe##*groovescripting}" --version
       - name: Rename asset
         shell: bash
         run: |
@@ -60,6 +74,7 @@ jobs:
           path: dist/${{ matrix.asset }}
   publish:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

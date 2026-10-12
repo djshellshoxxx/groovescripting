@@ -1,6 +1,8 @@
 """groovtest: reusable musical assertions evaluated over a project's deterministic event trace."""
 
 import argparse
+import contextlib
+import io
 import json
 import sys
 from pathlib import Path
@@ -11,7 +13,8 @@ from .projects import load, validate
 
 SCHEMA_VERSION = 1
 COUNT_KEYS = {"min", "max", "eq"}
-TEST_KEYS = {"name", "where", "count", "all", "none", "fingerprint", "seed"}
+# One trace per suite: the seed is a suite-level setting, so a per-test "seed" is an unknown key.
+TEST_KEYS = {"name", "where", "count", "all", "none", "fingerprint"}
 
 
 def _count_spec(value, name):
@@ -142,18 +145,42 @@ def parser():
 
 
 def cli(argv=None):
-    args = parser().parse_args(argv)
+    from .cli import early_logs
+
+    argv = list(sys.argv[1:] if argv is None else argv)
+    logger = handler = None
     try:
-        logger, handler = diagnostics.start(args, "groovtest")
-    except (ValueError, OSError) as error:
-        print(f"groovtest: {error}", file=sys.stderr)
-        return 2
-    try:
+        try:
+            logger, handler = early_logs(argv)
+        except (ValueError, OSError) as error:
+            print(f"groovtest: {error}", file=sys.stderr)
+            return 2
+        logger.info("Starting groovtest")
+        args = _parse(parser(), argv, logger)
         status = _run(args)
         logger.info("Completed groovtest status=%s", status)
         return status
+    except KeyboardInterrupt:
+        if logger:
+            logger.warning("Interrupted groovtest")
+        return 130
     finally:
-        diagnostics.close(logger, handler)
+        if logger and handler:
+            diagnostics.close(logger, handler)
+
+
+def _parse(argument_parser, argv, logger):
+    """parse_args, logging argparse errors before re-raising its SystemExit."""
+    captured = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(captured):
+            return argument_parser.parse_args(argv)
+    except SystemExit as stop:
+        if stop.code not in (0, None):
+            logger.error("Invalid arguments: %s", captured.getvalue().strip())
+        raise
+    finally:
+        sys.stderr.write(captured.getvalue())
 
 
 def _run(args):
