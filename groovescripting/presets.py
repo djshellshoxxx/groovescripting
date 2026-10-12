@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from .atomic import write_atomic
 from .validation import ALLOWED, validate_instrument_params
 
 DEFAULTS = dict(
@@ -184,6 +185,9 @@ def save(path, instrument, params, overwrite=False):
     validate_instrument_params(instrument, params)
     path = Path(path)
     data = {"version": 1, "instrument": instrument, "name": path.stem, "params": params}
-    with path.open("w" if overwrite else "x", encoding="utf-8") as stream:
-        json.dump(data, stream, indent=2, ensure_ascii=False, allow_nan=False)
-        stream.write("\n")
+    def write_preset(temporary):
+        with temporary.open("w", encoding="utf-8") as stream:
+            json.dump(data, stream, indent=2, ensure_ascii=False, allow_nan=False)
+            stream.write("\n")
+
+    write_atomic(path, write_preset, overwrite=overwrite)
