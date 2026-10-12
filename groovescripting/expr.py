@@ -13,6 +13,8 @@ Grammar (no eval, attribute access, indexing or calls):
 import math
 import re
 
+MAX_NESTING = 64
+
 FIELDS = {
     "track": str,
     "voice": str,
@@ -130,31 +132,33 @@ def compile_expression(text):
             return lambda r: not any(v == value for v in field_values(r, name))
         return lambda r: any(ops(v, value) for v in field_values(r, name))
 
-    def unary():
+    def unary(depth=0):
+        if depth > MAX_NESTING:
+            raise ExpressionError(f"expression nesting exceeds {MAX_NESTING} levels")
         kind, value, _ = peek()
         if kind == "word" and value == "not":
             take()
-            inner = unary()
+            inner = unary(depth + 1)
             return lambda r: not inner(r)
         if kind == "paren" and value == "(":
             take()
-            inner = disjunction()
+            inner = disjunction(depth + 1)
             take("paren", ")")
             return inner
         return compare()
 
-    def conjunction():
-        parts = [unary()]
+    def conjunction(depth=0):
+        parts = [unary(depth)]
         while peek()[0] == "word" and peek()[1] == "and":
             take()
-            parts.append(unary())
+            parts.append(unary(depth))
         return parts[0] if len(parts) == 1 else lambda r: all(p(r) for p in parts)
 
-    def disjunction():
-        parts = [conjunction()]
+    def disjunction(depth=0):
+        parts = [conjunction(depth)]
         while peek()[0] == "word" and peek()[1] == "or":
             take()
-            parts.append(conjunction())
+            parts.append(conjunction(depth))
         return parts[0] if len(parts) == 1 else lambda r: any(p(r) for p in parts)
 
     predicate = disjunction()
