@@ -22,10 +22,8 @@ def test_project_save_preserves_previous_file_after_partial_write(tmp_path, monk
     original_write = Path.write_text
 
     def fail_after_partial_write(self, text, *args, **kwargs):
-        if self == destination:
-            original_write(self, "partial JSON", *args, **kwargs)
-            raise OSError("simulated interrupted JSON write")
-        return original_write(self, text, *args, **kwargs)
+        original_write(self, "partial JSON", *args, **kwargs)
+        raise OSError("simulated interrupted JSON write")
 
     monkeypatch.setattr(Path, "write_text", fail_after_partial_write)
     with pytest.raises(OSError, match="interrupted"):
