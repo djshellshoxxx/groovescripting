@@ -191,3 +191,19 @@ def save(path, instrument, params, overwrite=False):
             stream.write("\n")
 
     write_atomic(path, write_preset, overwrite=overwrite)
+
+
+def save_effects(path, effects, overwrite=False):
+    """Validate and save an effect chain without risking an existing preset."""
+    from .effects import validate
+
+    validate(effects)
+    data = {"version": 1, "effects": effects}
+    write_atomic(
+        path,
+        lambda temporary: temporary.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
+            encoding="utf-8",
+        ),
+        overwrite=overwrite,
+    )
