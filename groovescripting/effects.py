@@ -20,6 +20,10 @@ def validate(effects):
         "fade": {"in_seconds": (0, 0, None), "out_seconds": (0, 0, None)},
         "lowpass": {"hz": (1000, 1, None), "resonance": (0, 0, 1)},
         "saturation": {"drive": (1, 0.001, 100)},
+        "highpass": {"hz": (80, 1, None), "resonance": (0, 0, 1)},
+        "normalize": {"peak_db": (-1, -60, 0)},
+        "limiter": {"ceiling_db": (-1, -60, 0)},
+        "chorus": {"rate_hz": (0.8, 0.01, 10), "depth_ms": (3, 0, 20), "mix": (0.4, 0, 1)},
         "delay": {
             "seconds": (0.25, 0.001, 30),
             "mix": (0.3, 0, 1),
@@ -60,6 +64,10 @@ def apply(data, sr, effects, tail="cut"):
         "fade": {"in_seconds", "out_seconds"},
         "lowpass": {"hz", "resonance"},
         "saturation": {"drive"},
+        "highpass": {"hz", "resonance"},
+        "normalize": {"peak_db"},
+        "limiter": {"ceiling_db"},
+        "chorus": {"rate_hz", "depth_ms", "mix"},
         "delay": {"seconds", "mix", "feedback", "repeats"},
         "reverb": {"seconds", "mix", "decay"},
     }
@@ -79,18 +87,38 @@ def apply(data, sr, effects, tail="cut"):
                 x[:fi] *= np.linspace(0, 1, fi)[:, None]
             if fo:
                 x[-fo:] *= np.linspace(1, 0, fo)[:, None]
-        elif kind == "lowpass":
-            hz = _number(e, "hz", 1000, 1, sr / 2 - 1)
+        elif kind in ("lowpass", "highpass"):
+            hz = _number(e, "hz", 1000 if kind == "lowpass" else 80, 1, sr / 2 - 1)
             q = 0.5 + 9.5 * _number(e, "resonance", 0, 0, 1)
             w = 2 * np.pi * hz / sr
             c = np.cos(w)
             a = np.sin(w) / (2 * q)
-            b = np.array([(1 - c) / 2, 1 - c, (1 - c) / 2]) / (1 + a)
+            if kind == "lowpass":
+                b = np.array([(1 - c) / 2, 1 - c, (1 - c) / 2]) / (1 + a)
+            else:
+                b = np.array([(1 + c) / 2, -(1 + c), (1 + c) / 2]) / (1 + a)
             aa = [1, -2 * c / (1 + a), (1 - a) / (1 + a)]
             x = lfilter(b, aa, x, axis=0)
         elif kind == "saturation":
             d = _number(e, "drive", 1, 0.001, 100)
             x = np.tanh(x * d) / np.tanh(d)
+        elif kind == "normalize":
+            peak = float(np.max(np.abs(x))) if len(x) else 0.0
+            if peak > 0:
+                x *= 10 ** (_number(e, "peak_db", -1, -60, 0) / 20) / peak
+        elif kind == "limiter":
+            ceiling = 10 ** (_number(e, "ceiling_db", -1, -60, 0) / 20)
+            x = ceiling * np.tanh(x / ceiling)
+        elif kind == "chorus":
+            depth = _number(e, "depth_ms", 3, 0, 20) * sr / 1000
+            lfo = np.sin(2 * np.pi * _number(e, "rate_hz", 0.8, 0.01, 10) * np.arange(len(x)) / sr)
+            wet = _number(e, "mix", 0.4, 0, 1)
+            position = np.arange(len(x)) - depth * (1 + lfo) - 1
+            index = np.clip(np.floor(position).astype(int), 0, max(len(x) - 1, 0))
+            frac = (position - np.floor(position))[:, None]
+            nxt = np.clip(index + 1, 0, max(len(x) - 1, 0))
+            delayed = x[index] * (1 - frac) + x[nxt] * frac
+            x = x * (1 - wet) + delayed * wet
         elif kind in ("delay", "reverb"):
             seconds = _number(e, "seconds", 0.25 if kind == "delay" else 1, 0.001, 30)
             wet = _number(e, "mix", 0.3, 0, 1)

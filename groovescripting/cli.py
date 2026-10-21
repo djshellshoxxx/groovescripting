@@ -26,6 +26,7 @@ TOOLS = {
     "groovtest": "test",
     "groovtime": "time",
     "groovmerge": "merge",
+    "groovtheory": "theory",
 }
 # Tools whose parser and entry point live in their own module (kind -> module name).
 MODULE_TOOLS = {
@@ -35,6 +36,7 @@ MODULE_TOOLS = {
     "test": "musictest",
     "time": "timeline",
     "merge": "merge",
+    "theory": "theory",
 }
 
 

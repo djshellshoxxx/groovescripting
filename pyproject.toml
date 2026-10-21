@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "groovescripting"
-version = "0.3.1b1"
+version = "0.4.0"
 description = "Scriptable drum, bass and lead synthesis with synchronized offline arrangements"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,6 +36,7 @@ groovdebug = "groovescripting.debug:main"
 groovtest = "groovescripting.musictest:main"
 groovtime = "groovescripting.timeline:main"
 groovmerge = "groovescripting.merge:main"
+groovtheory = "groovescripting.theory:main"
 
 [tool.setuptools.packages.find]
 include = ["groovescripting*"]

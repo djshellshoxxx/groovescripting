@@ -21,15 +21,22 @@ jobs:
             asset: groovescripting-windows-x64.exe
           - os: ubuntu-22.04
             asset: groovescripting-linux-x64
+          - os: macos-latest
+            asset: groovescripting-macos-arm64
+          - os: macos-15-intel
+            asset: groovescripting-macos-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install Linux audio libraries
+      - name: Install audio libraries
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libportaudio2 libsndfile1
+      - name: Install macOS audio libraries
+        if: runner.os == 'macOS'
+        run: brew install portaudio libsndfile
       - run: python -m pip install ".[playback]" "pyinstaller>=6.10,<7"
       - name: Build executable
         shell: bash
@@ -52,7 +59,7 @@ jobs:
           "$exe" groovinfo smoke.wav --json
           "$exe" groovlint examples/arrangement.json --audio smoke.wav
           "$exe" groovdebug examples/arrangement.json --format json --break 2 > /dev/null
-          for tool in groovdrm groovbss groovld groovmix groovseq groovfx groovplay groovinfo groovmidi groovlint groovdebug groovtest groovtime groovmerge; do
+          for tool in groovdrm groovbss groovld groovmix groovseq groovfx groovplay groovinfo groovmidi groovlint groovdebug groovtest groovtime groovmerge groovtheory; do
             "$exe" "$tool" --help > /dev/null
           done
           "$exe" groovdrm --preset breakbeat --bars 1 --limit --output drums.wav
@@ -61,6 +68,7 @@ jobs:
           "$exe" groovmidi import arrangement.mid --output imported.json --instrument lead
           "$exe" groovmerge examples/arrangement.json examples/arrangement.json examples/arrangement.json --output merged.json
           "$exe" groovtime log examples/arrangement.json > /dev/null
+          "$exe" groovtheory progression C I vi IV V
           "$exe" groovplay --diagnose
           cp "$exe" "groovseq${exe##*groovescripting}"
           "./groovseq${exe##*groovescripting}" --version
