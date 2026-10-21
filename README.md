@@ -148,3 +148,11 @@ python scripts/package_downloads.py
 CI tests Python on Linux, Windows and macOS. The Pages workflow packages downloads then publishes `docs/`. Offline render validation and hardware validation are documented separately in `docs/verification.md`.
 
 MIT licensed. See `LICENSE`.
+
+## Verified test status
+
+`python -m pytest` ran 179 tests on this snapshot (Python 3.13 in a scratch venv, Linux): 179 passed, 0 failed.
+
+## Wiki
+
+Wiki source pages are in [docs/wiki/](docs/wiki/Home.md): developer guide, architecture summary and codebase map. `docs/reference.html` and `docs/installation.md` are the user references.
