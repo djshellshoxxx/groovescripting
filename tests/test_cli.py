@@ -26,6 +26,7 @@ TOOLS = [
     "groovtest",
     "groovtime",
     "groovmerge",
+    "groovtheory",
 ]
 
 

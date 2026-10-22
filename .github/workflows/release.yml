@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to create or update (for example v0.3.0)
+        description: Existing immutable release tag (for example v0.4.1)
         required: true
 permissions:
   contents: write
@@ -28,6 +28,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -37,7 +39,12 @@ jobs:
       - name: Install macOS audio libraries
         if: runner.os == 'macOS'
         run: brew install portaudio libsndfile
-      - run: python -m pip install ".[playback]" "pyinstaller>=6.10,<7"
+      - run: python -m pip install ".[dev,playback]" "pyinstaller>=6.10,<7"
+      - name: Validate source
+        shell: bash
+        run: |
+          python -m ruff check groovescripting tests scripts examples
+          python -m pytest
       - name: Build executable
         shell: bash
         run: >-
@@ -86,6 +93,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -94,14 +103,29 @@ jobs:
         with:
           path: assets
           merge-multiple: true
-      - name: Create or update release
+      - name: Verify tag and artifact checksums
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          python - <<'PYCODE'
+          import hashlib
+          import os
+          from pathlib import Path
+          from groovescripting import __version__
+          if os.environ["TAG"] != "v" + __version__:
+              raise SystemExit("Tag must match the checked out package version")
+          files = sorted([*Path("assets").glob("*"), *Path("dist").glob("*")])
+          Path("SHA256SUMS").write_text("".join(
+              f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n"
+              for p in files if p.is_file()
+          ), encoding="utf-8")
+          PYCODE
+      - name: Publish new release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          files="assets/* dist/*"
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            gh release upload "$TAG" $files --clobber
-          else
-            gh release create "$TAG" $files --target "$GITHUB_SHA" --title "GrooveScripting $TAG" --notes-file .github/release-notes.md
-          fi
+          set -euo pipefail
+          git rev-parse --verify "refs/tags/$TAG^{commit}"
+          gh release create "$TAG" assets/* dist/* SHA256SUMS --verify-tag \
+            --title "GrooveScripting $TAG" --notes-file .github/release-notes.md

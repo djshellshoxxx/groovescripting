@@ -345,3 +345,73 @@ def test_semantic_merge_combines_dimensions_and_reports_conflicts(tmp_path):
         hashlib.sha256(paths[0].read_bytes()).hexdigest()
         == hashlib.sha256(json.dumps(base).encode()).hexdigest()
     )
+
+
+@pytest.mark.parametrize("track_name,segment", [
+    ("Bass/one", "Bass~1one"),
+    ("Bass~one", "Bass~0one"),
+    ("Bass/~one", "Bass~1~0one"),
+])
+@pytest.mark.parametrize("section_name", ["B/section", "B~section", "B/~section"])
+@pytest.mark.parametrize("source_kind", ["pattern", "params_pattern", "events", "drum_patterns"])
+def test_section_provenance_pointer_escapes_track_name(track_name, segment, section_name, source_kind):
+    p = project()
+    index = 0 if source_kind == "drum_patterns" else 1
+    p["tracks"][index]["name"] = track_name
+    p["sections"][1]["name"] = section_name
+    expected = "F2 . . ."
+    suffix = "pattern"
+    if source_kind == "pattern":
+        override = {"pattern": expected}
+    elif source_kind == "params_pattern":
+        p["tracks"][index].pop("pattern")
+        override = {"params": {"pattern": expected}}
+        suffix = "params/pattern"
+    elif source_kind == "events":
+        expected = [{"beat": 0, "notes": [41], "duration": 0.25}]
+        override = {"params": {"events": expected}}
+        suffix = "params/events"
+    else:
+        expected = "x..."
+        override = {"params": {"drum_patterns": {"kick": expected}}}
+        suffix = "params/drum_patterns/kick"
+    p["sections"][1]["tracks"] = {track_name: override}
+    _, records = trace.collect(p)
+    selected = [r for r in records if r["track"] == track_name and r["source"]["section"] == section_name]
+    assert selected
+    for record in selected:
+        pointer = record["source"]["pointer"]
+        assert pointer == f"/sections/1/tracks/{segment}/{suffix}"
+        resolved = p
+        for part in pointer.split("/")[1:]:
+            part = part.replace("~1", "/").replace("~0", "~")
+            resolved = resolved[int(part)] if isinstance(resolved, list) else resolved[part]
+        assert resolved == expected
+
+
+def test_event_provenance_takes_precedence_over_top_level_pattern():
+    p = project()
+    events = [{"beat": 0, "notes": [41], "duration": 0.25}]
+    p["sections"][1]["tracks"]["Bass"] = {"params": {"events": events}, "pattern": "G2 . . ."}
+    _, records = trace.collect(p)
+    selected = [r for r in records if r["track"] == "Bass" and r["source"]["section"] == "B"]
+    assert selected and all(r["notes"] == [41] for r in selected)
+    assert {r["source"]["pointer"] for r in selected} == {"/sections/1/tracks/Bass/params/events"}
+
+
+def test_top_level_pattern_provenance_precedes_section_param_pattern():
+    p = project()
+    p["sections"][1]["tracks"]["Bass"] = {"params": {"pattern": "F2 . . ."}}
+    _, records = trace.collect(p)
+    selected = [r for r in records if r["track"] == "Bass" and r["source"]["section"] == "B"]
+    assert selected
+    assert {r["source"]["pointer"] for r in selected} == {"/tracks/1/pattern"}
+
+
+def test_drum_map_provenance_precedes_unused_section_pattern():
+    p = project()
+    p["sections"][1]["tracks"]["Drums"] = {"pattern": "."}
+    _, records = trace.collect(p)
+    selected = [r for r in records if r["track"] == "Drums" and r["source"]["section"] == "B" and r["voice"] == "kick"]
+    assert selected
+    assert {r["source"]["pointer"] for r in selected} == {"/tracks/0/params/drum_patterns/kick"}

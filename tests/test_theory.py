@@ -56,3 +56,65 @@ def test_new_effects():
     assert np.abs(lim).max() <= 10 ** (-3 / 20) + 1e-9
     c = effects.apply(x, 44100, [{"type": "chorus"}])
     assert c.shape == x.shape and np.isfinite(c).all()
+
+
+@pytest.mark.parametrize("numeral,expected", [
+    ("isus2", [48, 50, 55]),
+    ("iisus4", [50, 55, 57]),
+    ("vimaj7", [57, 61, 64, 68]),
+    ("viidim", [59, 62, 65]),
+])
+def test_progression_suffixes_produce_renderable_chords(numeral, expected):
+    for token in theory.progression("C", [numeral]):
+        assert parse_pattern(token, "note")[0]["notes"] == expected
+
+
+def test_theory_invalid_octave_is_a_cli_error(capsys):
+    assert theory.main(["scale", "C", "major", "--octave", "10"]) == 2
+    assert "MIDI" in capsys.readouterr().err
+
+
+def test_chorus_delayed_signal_starts_with_silence():
+    import numpy as np
+
+    from groovescripting import effects
+
+    impulse = np.zeros((8, 1))
+    impulse[0] = 1
+    delayed = effects.apply(impulse, 8000, [{"type": "chorus", "depth_ms": 0, "mix": 1}])
+    np.testing.assert_array_equal(delayed[:, 0], [0, 1, 0, 0, 0, 0, 0, 0])
+
+
+def test_theory_logging_preserves_pattern_stdout(tmp_path, capsys):
+    log = tmp_path / "theory.log"
+    assert theory.main(["--log-file", str(log), "chord", "Cm7"]) == 0
+    assert capsys.readouterr().out.strip() == "C3+D#3+G3+A#3"
+    assert "Completed groovtheory" in log.read_text()
+
+
+@pytest.mark.parametrize("scale", sorted(theory.SCALES))
+def test_every_documented_scale_is_available_in_cli_and_presets(scale):
+    from groovescripting.cli import parser
+    from groovescripting.validation import validate_instrument_params
+
+    assert parser("groovld").parse_args(["--scale", scale]).scale == scale
+    validate_instrument_params("lead", {"scale": scale})
+
+
+def test_theory_cli_accepts_documented_numeric_pitch_class_root(capsys):
+    assert theory.main(["scale", "2", "dorian"]) == 0
+    assert capsys.readouterr().out.strip() == "D4 E4 F4 G4 A4 B4 C5 D5"
+
+
+@pytest.mark.parametrize("root", ["12", "-1"])
+def test_numeric_pitch_class_root_rejects_out_of_range(root, capsys):
+    assert theory.main(["scale", root, "dorian"]) == 2
+    assert capsys.readouterr().err
+
+
+def test_theory_argument_error_is_logged(tmp_path):
+    log = tmp_path / "invalid.log"
+    with pytest.raises(SystemExit) as stopped:
+        theory.main(["--log-file", str(log), "scale", "C", "not-a-scale"])
+    assert stopped.value.code == 2
+    assert "Argument error" in log.read_text()
