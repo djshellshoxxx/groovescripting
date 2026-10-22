@@ -36,3 +36,12 @@ Selected from the product differentiation review. All selected tools are specifi
 ## Standalone binaries (0.3.0)
 
 - [x] Release workflow builds PyInstaller executables for Windows (.exe) and Linux and attaches them to GitHub Releases: .github/workflows/release.yml
+
+## Release audit (0.4.1)
+
+- [x] Preserve the existing 0.4.0 theory/chord/Euclidean/effects implementation and native macOS release targets.
+- [x] Reproduce and correct advertised scale rejection in CLI/project/preset validation.
+- [x] Reproduce and correct progression suffixes, MIDI bounds and chorus startup samples.
+- [x] Apply shared opt-in logging to the fifteenth command, groovtheory.
+- [x] Add source validation, exact tag checkout, version validation and checksums to native release builds; refuse replacement of existing release assets.
+- [ ] Verify the new patch's native CI builds and publish its artifacts (tracked in docs/verification.md).

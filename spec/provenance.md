@@ -18,6 +18,8 @@ Record, for every scheduled event, where it came from and every transformation t
 
 `event_id` (12 hex, hash of track, section index, repetition, voice, source identity, chord/arp step), `track`, `instrument`, `voice`, `source` {`pointer` (JSON Pointer of the producing pattern/events), `section`, `section_index`, `repetition`, `origin` (`pattern` or `variation`), `source_index`}, `bar`, `beat` (1-based), `timing` {`requested_beat`, `resolved_beat`, `frame`, `sample_rate`}, `notes`, `duration`, `velocity`, `probability`, `accent`, `accepted`, ordered `decisions`, `resolved_parameters` with origin labels (`default`, `preset`, `project`, `section`), `trace_schema_version`, `run_fingerprint`.
 
+Source pointers follow RFC 6901 (`~` → `~0`, `/` → `~1` in each token). Section paths use their array index while section names remain metadata. Pointers identify the event array, drum voice map or pattern actually selected by rendering precedence.
+
 Decision kinds: `variation_insert`, `variation_shift`, `velocity_humanize`, `probability` (roll, threshold, pass/fail), `swing`, `humanize` (frames), `note_resolution` (scale/arpeggio), `voice_limit` (truncation frame), `window` (dropped outside render window).
 
 Not captured (always listed in the header `unavailable`): automation values, oscillator phase, effect processing.
