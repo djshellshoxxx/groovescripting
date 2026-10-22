@@ -16,7 +16,7 @@ Make patterns more musical with less typing: chord symbols, more scales/modes, E
 
 ## Scales
 
-`scale` option accepts chromatic, major, minor, pentatonic, minor_pentatonic, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, blues, whole_tone. `root` may be a pitch class number or note name.
+`scale` option accepts chromatic, major, minor, pentatonic, minor_pentatonic, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, blues, whole_tone. `root` may be a pitch class number (0–11) or note name.
 
 ## CLI
 

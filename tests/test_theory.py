@@ -58,10 +58,15 @@ def test_new_effects():
     assert c.shape == x.shape and np.isfinite(c).all()
 
 
-@pytest.mark.parametrize("numeral", ["isus2", "iisus4", "vimaj7", "viidim"])
-def test_progression_suffixes_produce_renderable_chords(numeral):
+@pytest.mark.parametrize("numeral,expected", [
+    ("isus2", [48, 50, 55]),
+    ("iisus4", [50, 55, 57]),
+    ("vimaj7", [57, 61, 64, 68]),
+    ("viidim", [59, 62, 65]),
+])
+def test_progression_suffixes_produce_renderable_chords(numeral, expected):
     for token in theory.progression("C", [numeral]):
-        assert parse_pattern(token, "note")
+        assert parse_pattern(token, "note")[0]["notes"] == expected
 
 
 def test_theory_invalid_octave_is_a_cli_error(capsys):
@@ -94,3 +99,22 @@ def test_every_documented_scale_is_available_in_cli_and_presets(scale):
 
     assert parser("groovld").parse_args(["--scale", scale]).scale == scale
     validate_instrument_params("lead", {"scale": scale})
+
+
+def test_theory_cli_accepts_documented_numeric_pitch_class_root(capsys):
+    assert theory.main(["scale", "2", "dorian"]) == 0
+    assert capsys.readouterr().out.strip() == "D4 E4 F4 G4 A4 B4 C5 D5"
+
+
+@pytest.mark.parametrize("root", ["12", "-1"])
+def test_numeric_pitch_class_root_rejects_out_of_range(root, capsys):
+    assert theory.main(["scale", root, "dorian"]) == 2
+    assert capsys.readouterr().err
+
+
+def test_theory_argument_error_is_logged(tmp_path):
+    log = tmp_path / "invalid.log"
+    with pytest.raises(SystemExit) as stopped:
+        theory.main(["--log-file", str(log), "scale", "C", "not-a-scale"])
+    assert stopped.value.code == 2
+    assert "Argument error" in log.read_text()

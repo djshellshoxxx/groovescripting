@@ -4,7 +4,6 @@ Pure functions with no audio or file IO. Chord symbols in note patterns use ``RO
 (for example ``Cm7@3``) so they never collide with plain note names such as ``Bb4``.
 """
 
-import argparse
 import re
 import sys
 
@@ -55,7 +54,12 @@ _CHORD_RE = re.compile(r"([A-Ga-g][#b]?)([^@]*)@(-?\d+)(?:/(\d+))?")
 
 
 def pitch_class(name):
-    """Pitch class 0..11 for a note name like ``C``, ``F#`` or ``Bb``."""
+    """Pitch class 0..11 for a numeric root or note name such as ``C``, ``F#`` or ``Bb``."""
+    if re.fullmatch(r"\d+", str(name)):
+        value = int(name)
+        if not 0 <= value <= 11:
+            raise ValueError("Pitch class must be within 0..11")
+        return value
     match = re.fullmatch(r"([A-Ga-g])([#b]?)", str(name))
     if not match:
         raise ValueError(f"Invalid note name: {name}")
@@ -73,7 +77,7 @@ def note_name(midi):
 def scale_pitch_classes(root, scale):
     if scale not in SCALES:
         raise ValueError(f"Unknown scale: {scale}")
-    base = root if isinstance(root, int) else pitch_class(root)
+    base = pitch_class(root)
     return [(base + step) % 12 for step in SCALES[scale]]
 
 
@@ -81,7 +85,7 @@ def scale_notes(root, scale, octave=4):
     """Ascending note names for one octave of a scale, including the octave note."""
     if scale not in SCALES:
         raise ValueError(f"Unknown scale: {scale}")
-    base = (octave + 1) * 12 + (root if isinstance(root, int) else pitch_class(root))
+    base = (octave + 1) * 12 + pitch_class(root)
     return [note_name(base + step) for step in SCALES[scale] + [12]]
 
 
@@ -149,7 +153,9 @@ def progression(key, numerals, scale="major", octave=3):
 
 
 def parser():
-    p = argparse.ArgumentParser(prog="groovtheory", description="GrooveScripting music theory helper")
+    from .cli import Parser
+
+    p = Parser(prog="groovtheory", description="GrooveScripting music theory helper")
     p.add_argument("--version", action="version", version=__version__)
     diagnostics.add_arguments(p)
     sub = p.add_subparsers(dest="command", required=True)
