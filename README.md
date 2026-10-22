@@ -82,7 +82,7 @@ Every event in a trace records its source JSON Pointer, section and repeat, and 
 
 ## Standalone executables
 
-Each GitHub Release includes `groovescripting-windows-x64.exe` and `groovescripting-linux-x64` built with PyInstaller; no Python installation is needed. Run any tool as the first argument, for example `groovescripting-windows-x64.exe groovseq project.json --output song.wav`. Copy or rename the file to a tool name (for example `groovseq.exe`) to run that tool directly. On Linux, `chmod +x groovescripting-linux-x64` first; playback needs `libportaudio2`.
+Each GitHub Release includes `groovescripting-windows-x64.exe`, `groovescripting-linux-x64`, `groovescripting-macos-arm64` and `groovescripting-macos-x64` built with PyInstaller; no Python installation is needed. Run any tool as the first argument, for example `groovescripting-windows-x64.exe groovseq project.json --output song.wav`. Copy or rename the file to a tool name (for example `groovseq.exe`) to run that tool directly. On Linux, `chmod +x groovescripting-linux-x64` first; playback needs `libportaudio2`.
 
 Automation lanes live on a project track and use absolute arrangement beats:
 

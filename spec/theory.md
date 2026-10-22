@@ -16,7 +16,7 @@ Make patterns more musical with less typing: chord symbols, more scales/modes, E
 
 ## Scales
 
-`scale` option accepts chromatic, major, minor, pentatonic, minor_pentatonic, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, blues, whole_tone. `root` may be a pitch class number or note name.
+`scale` option accepts chromatic, major, minor, pentatonic, minor_pentatonic, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, blues, whole_tone. `root` may be a pitch class number (0–11) or note name.
 
 ## CLI
 
@@ -27,20 +27,18 @@ groovtheory euclid PULSES STEPS [--rotate N]
 groovtheory progression KEY NUMERAL... [--octave N]
 ~~~
 
+Shared `--log-file`, `--log-level` and `--log-format` flags precede the subcommand, e.g. `groovtheory --log-file theory.log chord Cm7`. Scale and chord outputs must stay within MIDI 0–127.
+
 Output is a single line suitable for shell substitution into a pattern. Invalid input prints `groovtheory: MESSAGE` to stderr and exits 2.
 
 ## Progression numerals
 
-Roman numerals I–VII; uppercase = major triad, lowercase = minor; optional `b`/`#` prefix and `7`, `maj7`, `dim`, `sus2`, `sus4` suffix. Degrees are interpreted against the major scale from KEY. Explicit `maj7`, `dim`, `sus2` and `sus4` suffixes select that chord quality regardless of numeral case; lowercase `7` remains a minor seventh.
+Roman numerals I–VII; uppercase = major triad, lowercase = minor; optional `b`/`#` prefix and `7`, `maj7`, `dim`, `sus2`, `sus4` suffix. A `7` suffix retains major/minor case; explicit `maj7`, `dim`, `sus2` and `sus4` qualities override it. Degrees are interpreted against the major scale from KEY.
 
 ## Effects added in 0.4.0
-
-All scale names are accepted consistently by CLI arguments, presets and project JSON.
 
 `highpass(hz,resonance)`, `normalize(peak_db)`, `limiter(ceiling_db)` (tanh soft ceiling), `chorus(rate_hz,depth_ms,mix)` (interpolated modulated delay).
 
 ## Limitations
-
-Chorus uses zero history before the input starts and accepts empty buffers.
 
 No automatic voice leading, key detection or chord-name recognition. Limiter is a static waveshaper, not a look-ahead dynamics processor.
