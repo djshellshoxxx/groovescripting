@@ -57,3 +57,11 @@ Remote cross-platform evidence for commit `d0863197fd083b02189356378789a84fe7341
 - the separate coverage job passed and the dependency audit job passed
 
 0.2.0 MIDI is intentionally file-oriented and opens no realtime MIDI device. MIDI import currently accepts melodic tracks; percussion-only import is deferred while drum export is supported through General MIDI channel 10. MIDI export does not encode audio-domain automation/effects as MIDI CC. Automation version 1 is limited to gain, pan, cutoff and saturation. The existing low-pass implementation updates filter coefficients in 64-frame blocks, so cutoff automation inherits that DSP resolution while gain, pan and saturation curves are evaluated per sample.
+
+## 0.4.1 cloud release audit (2026-10-22)
+
+Selected main was `b9ede15`; the existing published `v0.4.0` tag was its direct descendant `ceb2b24`, on PR #9. The audit preserved that work, including its macOS arm64/x64 release matrix. GitHub confirmed that v0.4.0 already contains all four native executables plus wheel/sdist; that evidence does not establish publication of this patch.
+
+Reproduced defects before fixes: six focused failures for progression suffixes, out-of-range scale output, chorus prehistory and missing theory logging, followed by ten failing cases for documented modes rejected by CLI validation. Focused suite after correction: **27 passed**. CLI and persisted presets now share the same scale registry as the engine. Existing device tests use mocks; the cloud host has no physical output devices. The release executables are unsigned, including macOS builds without notarization.
+
+Current release validation and publication outcomes will be recorded below after the native jobs complete. Physical audio and OS volume verification remain external acceptance checks.

@@ -27,11 +27,13 @@ groovtheory euclid PULSES STEPS [--rotate N]
 groovtheory progression KEY NUMERAL... [--octave N]
 ~~~
 
+Shared `--log-file`, `--log-level` and `--log-format` flags precede the subcommand, e.g. `groovtheory --log-file theory.log chord Cm7`. Scale and chord outputs must stay within MIDI 0–127.
+
 Output is a single line suitable for shell substitution into a pattern. Invalid input prints `groovtheory: MESSAGE` to stderr and exits 2.
 
 ## Progression numerals
 
-Roman numerals I–VII; uppercase = major triad, lowercase = minor; optional `b`/`#` prefix and `7`, `maj7`, `dim`, `sus2`, `sus4` suffix. Degrees are interpreted against the major scale from KEY.
+Roman numerals I–VII; uppercase = major triad, lowercase = minor; optional `b`/`#` prefix and `7`, `maj7`, `dim`, `sus2`, `sus4` suffix. A `7` suffix retains major/minor case; explicit `maj7`, `dim`, `sus2` and `sus4` qualities override it. Degrees are interpreted against the major scale from KEY.
 
 ## Effects added in 0.4.0
 

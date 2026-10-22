@@ -8,7 +8,7 @@ import argparse
 import re
 import sys
 
-from . import __version__
+from . import __version__, diagnostics
 
 SCALES = {
     "chromatic": list(range(12)),
@@ -65,6 +65,8 @@ def pitch_class(name):
 
 def note_name(midi):
     midi = int(midi)
+    if not 0 <= midi <= 127:
+        raise ValueError("Note outside MIDI range")
     return f"{_NAMES[midi % 12]}{midi // 12 - 1}"
 
 
@@ -77,6 +79,8 @@ def scale_pitch_classes(root, scale):
 
 def scale_notes(root, scale, octave=4):
     """Ascending note names for one octave of a scale, including the octave note."""
+    if scale not in SCALES:
+        raise ValueError(f"Unknown scale: {scale}")
     base = (octave + 1) * 12 + (root if isinstance(root, int) else pitch_class(root))
     return [note_name(base + step) for step in SCALES[scale] + [12]]
 
@@ -135,8 +139,11 @@ def progression(key, numerals, scale="major", octave=3):
         accidental, roman, extra = match.groups()
         degree = _ROMAN[roman.upper()]
         root = (tonic + degree + {"": 0, "#": 1, "b": -1}[accidental]) % 12
-        quality = ("m" if roman.islower() else "") + (extra or "")
-        quality = {"mdim": "dim", "m7": "m7", "7": "7"}.get(quality, quality)
+        quality = "m" if roman.islower() else ""
+        if extra in ("dim", "sus2", "sus4", "maj7"):
+            quality = extra
+        elif extra == "7":
+            quality += "7"
         out.append(f"{_NAMES[root]}{quality}@{octave}")
     return out
 
@@ -144,6 +151,7 @@ def progression(key, numerals, scale="major", octave=3):
 def parser():
     p = argparse.ArgumentParser(prog="groovtheory", description="GrooveScripting music theory helper")
     p.add_argument("--version", action="version", version=__version__)
+    diagnostics.add_arguments(p)
     sub = p.add_subparsers(dest="command", required=True)
     s = sub.add_parser("scale", help="list scale notes")
     s.add_argument("root")
@@ -164,8 +172,14 @@ def parser():
 
 
 def main(argv=None):
-    args = parser().parse_args(argv)
+    from .cli import early_logs
+
+    argv = list(sys.argv[1:] if argv is None else argv)
+    logger = handler = None
     try:
+        logger, handler = early_logs(argv)
+        logger.info("Starting groovtheory")
+        args = parser().parse_args(argv)
         if args.command == "scale":
             print(" ".join(scale_notes(args.root, args.scale, args.octave)))
         elif args.command == "chord":
@@ -175,9 +189,24 @@ def main(argv=None):
         else:
             chords = progression(args.key, args.numerals, octave=args.octave)
             print(" ".join(expand_chord_token(c) for c in chords))
+        logger.info("Completed groovtheory")
+    except KeyboardInterrupt:
+        if logger:
+            logger.warning("Interrupted groovtheory")
+        return 130
     except ValueError as error:
+        if logger:
+            logger.exception("Invalid input: %s", error)
         print(f"groovtheory: {error}", file=sys.stderr)
         return 2
+    except OSError as error:
+        if logger:
+            logger.exception("Operation failed: %s", error)
+        print(f"groovtheory: {error}", file=sys.stderr)
+        return 1
+    finally:
+        if logger and handler:
+            diagnostics.close(logger, handler)
     return 0
 
 

@@ -114,10 +114,11 @@ def apply(data, sr, effects, tail="cut"):
             lfo = np.sin(2 * np.pi * _number(e, "rate_hz", 0.8, 0.01, 10) * np.arange(len(x)) / sr)
             wet = _number(e, "mix", 0.4, 0, 1)
             position = np.arange(len(x)) - depth * (1 + lfo) - 1
-            index = np.clip(np.floor(position).astype(int), 0, max(len(x) - 1, 0))
-            frac = (position - np.floor(position))[:, None]
-            nxt = np.clip(index + 1, 0, max(len(x) - 1, 0))
-            delayed = x[index] * (1 - frac) + x[nxt] * frac
+            delayed = np.zeros_like(x)
+            for channel in range(x.shape[1]):
+                delayed[:, channel] = np.interp(
+                    position + 1, np.arange(len(x) + 1), np.r_[0, x[:, channel]], left=0, right=0
+                ) if len(x) else 0
             x = x * (1 - wet) + delayed * wet
         elif kind in ("delay", "reverb"):
             seconds = _number(e, "seconds", 0.25 if kind == "delay" else 1, 0.001, 30)

@@ -56,3 +56,41 @@ def test_new_effects():
     assert np.abs(lim).max() <= 10 ** (-3 / 20) + 1e-9
     c = effects.apply(x, 44100, [{"type": "chorus"}])
     assert c.shape == x.shape and np.isfinite(c).all()
+
+
+@pytest.mark.parametrize("numeral", ["isus2", "iisus4", "vimaj7", "viidim"])
+def test_progression_suffixes_produce_renderable_chords(numeral):
+    for token in theory.progression("C", [numeral]):
+        assert parse_pattern(token, "note")
+
+
+def test_theory_invalid_octave_is_a_cli_error(capsys):
+    assert theory.main(["scale", "C", "major", "--octave", "10"]) == 2
+    assert "MIDI" in capsys.readouterr().err
+
+
+def test_chorus_delayed_signal_starts_with_silence():
+    import numpy as np
+
+    from groovescripting import effects
+
+    impulse = np.zeros((8, 1))
+    impulse[0] = 1
+    delayed = effects.apply(impulse, 8000, [{"type": "chorus", "depth_ms": 0, "mix": 1}])
+    np.testing.assert_array_equal(delayed[:, 0], [0, 1, 0, 0, 0, 0, 0, 0])
+
+
+def test_theory_logging_preserves_pattern_stdout(tmp_path, capsys):
+    log = tmp_path / "theory.log"
+    assert theory.main(["--log-file", str(log), "chord", "Cm7"]) == 0
+    assert capsys.readouterr().out.strip() == "C3+D#3+G3+A#3"
+    assert "Completed groovtheory" in log.read_text()
+
+
+@pytest.mark.parametrize("scale", sorted(theory.SCALES))
+def test_every_documented_scale_is_available_in_cli_and_presets(scale):
+    from groovescripting.cli import parser
+    from groovescripting.validation import validate_instrument_params
+
+    assert parser("groovld").parse_args(["--scale", scale]).scale == scale
+    validate_instrument_params("lead", {"scale": scale})

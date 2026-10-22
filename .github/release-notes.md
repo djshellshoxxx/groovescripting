@@ -1,26 +1,12 @@
-# GrooveScripting v0.4.0
+# GrooveScripting v0.4.1
 
-Standalone executables for Windows, Linux and macOS (Apple silicon and Intel). Python is not required.
+This patch preserves the v0.4.0 theory tools, chord/Euclidean patterns, scales and effects while correcting edge cases found by regression tests.
 
-## New
-- `groovtheory`: scales, chord symbols, Euclidean rhythms and roman-numeral progressions.
-- Chord tokens in note patterns (`Cm7@3`, `Am@3/1`) and `euclid(5,8)` drum patterns.
-- Nine new scales/modes (dorian, phrygian, lydian, mixolydian, locrian, harmonic/melodic minor, blues, whole tone, minor pentatonic).
-- New effects: `highpass`, `normalize`, `limiter`, `chorus`.
-- macOS builds added to the release workflow.
+- All documented scales and modes are available through CLI flags, projects and presets.
+- Roman-numeral progressions accept explicit suspended, diminished and major-seventh qualities with lowercase degrees.
+- Scale output rejects notes outside MIDI 0–127.
+- Chorus uses silence before the start of its delay instead of repeating the first sample.
+- `groovtheory` supports the same opt-in troubleshooting logs as the other commands.
+- Native Windows x64, Linux x64, macOS arm64 and macOS x64 executables, wheel and source distribution are published with SHA-256 checksums after source tests and executable smoke checks.
 
-## Running
-Linux/macOS (make executable first: `chmod +x ./groovescripting-*`):
-
-```sh
-./groovescripting-linux-x64 --version
-./groovescripting-linux-x64 groovseq examples/first-groove.json --output groove.wav
-```
-
-macOS binaries are unsigned; clear quarantine with `xattr -d com.apple.quarantine ./groovescripting-macos-arm64`.
-
-Windows:
-
-```powershell
-.\groovescripting-windows-x64.exe --version
-```
+Run the executable with a command such as `groovseq examples/first-groove.json --output groove.wav`. Examples and specifications are included in the source distribution. `groovtime` requires Git on PATH. Playback requires an audio device; hardware playback and host volume remain separate physical-device checks. macOS executables are unsigned and unnotarized.
