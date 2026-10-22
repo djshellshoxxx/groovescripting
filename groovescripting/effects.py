@@ -114,10 +114,12 @@ def apply(data, sr, effects, tail="cut"):
             lfo = np.sin(2 * np.pi * _number(e, "rate_hz", 0.8, 0.01, 10) * np.arange(len(x)) / sr)
             wet = _number(e, "mix", 0.4, 0, 1)
             position = np.arange(len(x)) - depth * (1 + lfo) - 1
-            index = np.clip(np.floor(position).astype(int), 0, max(len(x) - 1, 0))
-            frac = (position - np.floor(position))[:, None]
-            nxt = np.clip(index + 1, 0, max(len(x) - 1, 0))
-            delayed = x[index] * (1 - frac) + x[nxt] * frac
+            # A causal delay has zero history before the first input sample.
+            grid = np.arange(-1, len(x))
+            delayed = np.column_stack([
+                np.interp(position, grid, np.concatenate(([0.0], channel)), left=0, right=0)
+                for channel in x.T
+            ])
             x = x * (1 - wet) + delayed * wet
         elif kind in ("delay", "reverb"):
             seconds = _number(e, "seconds", 0.25 if kind == "delay" else 1, 0.001, 30)

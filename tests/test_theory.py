@@ -56,3 +56,37 @@ def test_new_effects():
     assert np.abs(lim).max() <= 10 ** (-3 / 20) + 1e-9
     c = effects.apply(x, 44100, [{"type": "chorus"}])
     assert c.shape == x.shape and np.isfinite(c).all()
+
+
+@pytest.mark.parametrize("scale", sorted(theory.SCALES))
+def test_scale_modes_work_through_cli_and_project(scale):
+    from groovescripting import cli, projects
+
+    args = cli.parser("groovld").parse_args(["--scale", scale, "--root", "D"])
+    assert args.scale == scale
+    project = {
+        "version": 1,
+        "sample_rate": 8000,
+        "tracks": [{"name": "Lead", "instrument": "lead", "pattern": "C4 E4", "params": {"scale": scale, "root": "D"}}],
+    }
+    audio, sample_rate, _ = projects.render_project(project, render)
+    assert sample_rate == 8000 and audio.shape[0] > 0
+
+
+@pytest.mark.parametrize("numeral", ["imaj7", "isus2", "isus4", "idim"])
+def test_progression_explicit_suffixes_produce_supported_chords(numeral):
+    chord = theory.progression("C", [numeral])[0]
+    assert theory.expand_chord_token(chord)
+
+
+def test_chorus_delay_starts_with_silence_and_preserves_empty_buffers():
+    import numpy as np
+
+    from groovescripting import effects
+
+    impulse = np.zeros((16, 1))
+    impulse[0, 0] = 1
+    output = effects.apply(impulse, 8000, [{"type": "chorus", "depth_ms": 0, "mix": 1}])
+    assert np.array_equal(output[:, 0], np.r_[0, impulse[:-1, 0]])
+    empty = effects.apply(np.zeros((0, 2)), 8000, [{"type": "chorus"}])
+    assert empty.shape == (0, 2)

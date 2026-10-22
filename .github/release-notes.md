@@ -1,26 +1,15 @@
-# GrooveScripting v0.4.0
+# GrooveScripting v0.4.1
 
-Standalone executables for Windows, Linux and macOS (Apple silicon and Intel). Python is not required.
+Standalone executables for Windows x64, Linux x64 and macOS (Apple silicon and Intel), plus Python wheel and source distribution. Python is not required for standalone executables.
 
-## New
-- `groovtheory`: scales, chord symbols, Euclidean rhythms and roman-numeral progressions.
-- Chord tokens in note patterns (`Cm7@3`, `Am@3/1`) and `euclid(5,8)` drum patterns.
-- Nine new scales/modes (dorian, phrygian, lydian, mixolydian, locrian, harmonic/melodic minor, blues, whole tone, minor pentatonic).
-- New effects: `highpass`, `normalize`, `limiter`, `chorus`.
-- macOS builds added to the release workflow.
+## Fixes
 
-## Running
-Linux/macOS (make executable first: `chmod +x ./groovescripting-*`):
+- All documented scales and modes now work through synthesis CLI arguments, presets and project JSON, using one shared list.
+- Roman-numeral progressions with explicit maj7, dim, sus2 and sus4 suffixes produce supported chord symbols for lowercase numerals.
+- Chorus starts with silent delay history and handles empty buffers.
+- Event provenance pointers resolve section track names containing `/` or `~` correctly.
+- Native release packaging now requires source lint, the full regression suite and documented offline examples before building executables; executable smoke tests remain required.
 
-```sh
-./groovescripting-linux-x64 --version
-./groovescripting-linux-x64 groovseq examples/first-groove.json --output groove.wav
-```
+Includes the v0.4.0 music theory helpers, chord and Euclidean patterns, scales/modes and new effects. Run `groovescripting-<platform> --help` or pass any of the 15 tool names as the first argument.
 
-macOS binaries are unsigned; clear quarantine with `xattr -d com.apple.quarantine ./groovescripting-macos-arm64`.
-
-Windows:
-
-```powershell
-.\groovescripting-windows-x64.exe --version
-```
+Physical audio playback and OS volume changes require local audio hardware and are not validated by cloud rendering tests. macOS binaries are unsigned; signing and notarization are not included.

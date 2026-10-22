@@ -31,12 +31,16 @@ Output is a single line suitable for shell substitution into a pattern. Invalid 
 
 ## Progression numerals
 
-Roman numerals I–VII; uppercase = major triad, lowercase = minor; optional `b`/`#` prefix and `7`, `maj7`, `dim`, `sus2`, `sus4` suffix. Degrees are interpreted against the major scale from KEY.
+Roman numerals I–VII; uppercase = major triad, lowercase = minor; optional `b`/`#` prefix and `7`, `maj7`, `dim`, `sus2`, `sus4` suffix. Degrees are interpreted against the major scale from KEY. Explicit `maj7`, `dim`, `sus2` and `sus4` suffixes select that chord quality regardless of numeral case; lowercase `7` remains a minor seventh.
 
 ## Effects added in 0.4.0
+
+All scale names are accepted consistently by CLI arguments, presets and project JSON.
 
 `highpass(hz,resonance)`, `normalize(peak_db)`, `limiter(ceiling_db)` (tanh soft ceiling), `chorus(rate_hz,depth_ms,mix)` (interpolated modulated delay).
 
 ## Limitations
+
+Chorus uses zero history before the input starts and accepts empty buffers.
 
 No automatic voice leading, key detection or chord-name recognition. Limiter is a static waveshaper, not a look-ahead dynamics processor.

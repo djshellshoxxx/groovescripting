@@ -136,7 +136,8 @@ def progression(key, numerals, scale="major", octave=3):
         degree = _ROMAN[roman.upper()]
         root = (tonic + degree + {"": 0, "#": 1, "b": -1}[accidental]) % 12
         quality = ("m" if roman.islower() else "") + (extra or "")
-        quality = {"mdim": "dim", "m7": "m7", "7": "7"}.get(quality, quality)
+        if extra and extra != "7":
+            quality = extra
         out.append(f"{_NAMES[root]}{quality}@{octave}")
     return out
 
