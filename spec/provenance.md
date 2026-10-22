@@ -29,3 +29,5 @@ SHA-256 (first 16 hex) of canonical JSON of the validated project, CLI overrides
 ## Files
 
 JSON Lines: one header record (`kind: "header"`, derived per-section/per-track seeds, event count, unavailable fields) followed by event records in frame order. Writes go to a temporary sibling and are atomically replaced; existing files require `--overwrite`. `--max-events` (default 100000) bounds collection.
+
+Source pointer path tokens follow RFC 6901: `~` becomes `~0` and `/` becomes `~1`, including section override track names. Consumers decode `~1` before `~0`.

@@ -43,7 +43,8 @@ def _event_id(*parts):
 def _pattern_source(project, step, track_index, name, voice):
     """JSON Pointer of the pattern data that produced a track's events in one section."""
     override = step["section"].get("tracks", {}).get(name, {})
-    base = f"/sections/{step['section_index']}/tracks/{name}" if project.get("sections") else None
+    token = name.replace("~", "~0").replace("/", "~1")
+    base = f"/sections/{step['section_index']}/tracks/{token}" if project.get("sections") else None
     if base and "pattern" in override:
         return base + "/pattern"
     if base and voice in override.get("params", {}).get("drum_patterns", {}):
