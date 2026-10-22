@@ -9,6 +9,7 @@ from scipy.signal import lfilter
 from . import presets
 from . import variation as event_variation
 from .music import beat_frame, frequency, note_value, parse_pattern
+from .theory import SCALES
 
 DRUMS = ("kick", "snare", "closed_hat", "open_hat", "clap", "tom", "rim")
 
@@ -449,12 +450,7 @@ def render(instrument, options=None, trace=None):
                 raise ValueError("Notes must be finite and below Nyquist")
             scale = o.get("scale", "chromatic")
             scale = "chromatic" if scale == "none" else scale
-            scales = {
-                "chromatic": list(range(12)),
-                "major": [0, 2, 4, 5, 7, 9, 11],
-                "minor": [0, 2, 3, 5, 7, 8, 10],
-                "pentatonic": [0, 2, 4, 7, 9],
-            }
+            scales = SCALES
             if scale not in scales:
                 raise ValueError("Unknown scale")
             root = o.get("root", 0)

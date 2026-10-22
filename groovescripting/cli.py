@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 
 from . import __version__, diagnostics, presets
+from .validation import CHOICES
 
 TOOLS = {
     "groovdrm": "drum",
@@ -26,6 +27,7 @@ TOOLS = {
     "groovtest": "test",
     "groovtime": "time",
     "groovmerge": "merge",
+    "groovtheory": "theory",
 }
 # Tools whose parser and entry point live in their own module (kind -> module name).
 MODULE_TOOLS = {
@@ -35,6 +37,7 @@ MODULE_TOOLS = {
     "test": "musictest",
     "time": "timeline",
     "merge": "merge",
+    "theory": "theory",
 }
 
 
@@ -178,7 +181,7 @@ def parser(tool):
         if kind != "drum":
             p.add_argument("--frequency", type=number(10, 20000), help="single frequency event in Hz")
         if kind != "drum":
-            p.add_argument("--scale", choices=["none", "major", "minor", "pentatonic", "chromatic"])
+            p.add_argument("--scale", choices=sorted(CHOICES["scale"]))
             p.add_argument("--root")
         p.add_argument("--preset", metavar="NAME_OR_PATH")
         p.add_argument("--save-preset", metavar="PATH")

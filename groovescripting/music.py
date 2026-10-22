@@ -4,6 +4,8 @@ import math
 import re
 from decimal import ROUND_HALF_UP, Decimal
 
+from .theory import expand_chord_token, expand_euclid
+
 
 def beat_frame(beat, bpm=120, sample_rate=44100):
     return int(
@@ -50,6 +52,8 @@ def parse_pattern(pattern, kind="note", subdivision=4):
     if subdivision <= 0:
         raise ValueError("subdivision must be positive")
     pattern = str(pattern).strip()
+    if kind == "drum":
+        pattern = expand_euclid(pattern) or pattern
     tokens = (
         list(pattern)
         if kind == "drum" and re.fullmatch(r"[xX.\-]+", pattern)
@@ -59,6 +63,9 @@ def parse_pattern(pattern, kind="note", subdivision=4):
     )
     events = []
     for index, token in enumerate(tokens):
+        if kind != "drum" and "@" in token:
+            head, _, rest = token.partition(":")
+            token = (expand_chord_token(head) or head) + (":" + rest if rest else "")
         fields = token.split(":")
         if len(fields) > 4:
             raise ValueError("Pattern token has too many fields")

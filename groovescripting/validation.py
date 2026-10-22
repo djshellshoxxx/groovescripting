@@ -2,6 +2,8 @@
 
 import math
 
+from .theory import SCALES
+
 DRUM_VOICES = ("kick", "snare", "closed_hat", "open_hat", "clap", "tom", "rim")
 
 RANGES = {
@@ -122,7 +124,7 @@ ALLOWED = {"drum": DRUM_ALLOWED, "bass": BASS_ALLOWED, "lead": LEAD_ALLOWED}
 
 CHOICES = {
     "waveform": {"sine", "triangle", "saw", "pulse", "square"},
-    "scale": {"none", "major", "minor", "pentatonic", "chromatic"},
+    "scale": {"none", *SCALES},
     "arp": {"off", "up", "down", "random"},
     "mode": {"mono", "poly"},
     "voice": set(DRUM_VOICES),

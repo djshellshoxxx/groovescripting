@@ -87,6 +87,24 @@ def test_trace_records_provenance_and_decisions():
     assert all(r["timing"]["frame"] is None or r["decisions"][-1]["kind"] == "window" for r in rejected)
 
 
+@pytest.mark.parametrize("name", ["Bass/dry", "Bass~0wet", "Bass/~1dry"])
+def test_trace_section_pointer_resolves_special_track_names(name):
+    p = {
+        "version": 1,
+        "bars": 1,
+        "tracks": [{"name": name, "instrument": "bass", "pattern": "C2 . . ."}],
+        "sections": [{"bars": 1, "tracks": {name: {"pattern": "D2 . . ."}}}],
+    }
+    _, records = trace.collect(p)
+    assert records
+    for record in records:
+        value = p
+        for token in record["source"]["pointer"].split("/")[1:]:
+            token = token.replace("~1", "/").replace("~0", "~")
+            value = value[int(token)] if isinstance(value, list) else value[token]
+        assert value == "D2 . . ."
+
+
 def test_tracing_does_not_change_rendered_audio():
     p = project()
     traced = []
