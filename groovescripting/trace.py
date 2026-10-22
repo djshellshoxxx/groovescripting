@@ -40,27 +40,37 @@ def _event_id(*parts):
     return hashlib.sha256("|".join(map(str, parts)).encode("utf-8")).hexdigest()[:12]
 
 
-def _pattern_source(project, step, track_index, name, voice):
-    """JSON Pointer of the pattern data that produced a track's events in one section."""
-    override = step["section"].get("tracks", {}).get(name, {})
-    base = f"/sections/{step['section_index']}/tracks/{name}" if project.get("sections") else None
-    if base and "pattern" in override:
-        return base + "/pattern"
-    if base and voice in override.get("params", {}).get("drum_patterns", {}):
-        return base + "/params/drum_patterns/" + voice
-    if base and any(k in override.get("params", {}) for k in ("pattern", "events")):
-        key = "events" if "events" in override["params"] else "pattern"
-        return base + "/params/" + key
+def _pointer(*segments):
+    """Encode JSON Pointer segments, escaping literal tildes before slashes (RFC 6901)."""
+    return "".join("/" + str(part).replace("~", "~0").replace("/", "~1") for part in segments)
+
+
+def _pattern_source(project, step, track_index, name, voice, resolved_params):
+    """Locate the source actually selected by the scheduler's event/pattern precedence."""
     track = project["tracks"][track_index]
+    override = step["section"].get("tracks", {}).get(name, {})
+    section_path = ("sections", step["section_index"], "tracks", name)
+    track_path = ("tracks", track_index)
+
+    def parameter_source(key, *suffix):
+        if key in override.get("params", {}):
+            return _pointer(*section_path, "params", key, *suffix)
+        if key in track.get("params", {}):
+            return _pointer(*track_path, "params", key, *suffix)
+        # Preset/default parameters are represented by their project track reference.
+        return _pointer(*track_path)
+
+    if resolved_params.get("events") is not None:
+        return parameter_source("events")
+    if voice in resolved_params.get("drum_patterns", {}):
+        return parameter_source("drum_patterns", voice)
+    if "pattern" in override:
+        return _pointer(*section_path, "pattern")
     if "pattern" in track:
-        return f"/tracks/{track_index}/pattern"
-    params = track.get("params", {})
-    if voice in params.get("drum_patterns", {}):
-        return f"/tracks/{track_index}/params/drum_patterns/{voice}"
-    for key in ("events", "pattern"):
-        if key in params:
-            return f"/tracks/{track_index}/params/{key}"
-    return f"/tracks/{track_index}"
+        return _pointer(*track_path, "pattern")
+    if "pattern" in resolved_params:
+        return parameter_source("pattern")
+    return _pointer(*track_path)
 
 
 def _origin(project, track, key, step):
@@ -166,7 +176,7 @@ def collect(project, seed=None, max_events=DEFAULT_MAX_EVENTS):
                         instrument=t["instrument"],
                         voice=voice,
                         source=dict(
-                            pointer=_pattern_source(project, step, item["index"], t["name"], voice),
+                            pointer=_pattern_source(project, step, item["index"], t["name"], voice, params),
                             section=step["section"].get("name", f"section-{step['section_index'] + 1}"),
                             section_index=step["section_index"],
                             repetition=step["repetition"],
