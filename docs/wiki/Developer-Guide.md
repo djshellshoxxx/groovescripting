@@ -2,7 +2,7 @@
 
 ```sh
 python -m pip install '.[dev]'
-python -m pytest          # 179 pass on this snapshot (Linux, Python 3.13)
+python -m pytest
 python -m build
 python scripts/package_downloads.py
 ```

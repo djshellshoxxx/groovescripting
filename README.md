@@ -159,7 +159,7 @@ MIT licensed. See `LICENSE`.
 
 ## Verified test status
 
-`python -m pytest` ran 179 tests on this snapshot (Python 3.13 in a scratch venv, Linux): 179 passed, 0 failed.
+Verification results are recorded by revision in [docs/verification.md](docs/verification.md); run `python -m pytest` to verify your checkout.
 
 ## Wiki
 
