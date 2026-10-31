@@ -180,3 +180,123 @@ def test_import_closes_unclosed_note_at_file_end(tmp_path, conductor_first):
     mf.save(source)
     project = midi.import_file(source, quantize=False)
     assert project["tracks"][0]["params"]["events"][0]["duration"] == 4
+
+
+def test_import_drums_requires_opt_in_and_maps_all_voices(tmp_path):
+    source = tmp_path / "drums.mid"
+    mf = mido.MidiFile()
+    track = mido.MidiTrack([mido.MetaMessage("track_name", name="Kit")])
+    mf.tracks.append(track)
+    for note in [36, 38, 42, 46, 39, 45, 37]:
+        track.append(mido.Message("note_on", note=note, velocity=96, channel=9))
+        track.append(mido.Message("note_on", note=note, velocity=0, channel=9, time=120))
+    mf.save(source)
+    with pytest.raises(ValueError, match="percussion"):
+        midi.import_file(source)
+    project = midi.import_file(source, include_drums=True)
+    assert projects.validate(project) is project
+    assert [t["params"]["voice"] for t in project["tracks"]] == [
+        "kick",
+        "snare",
+        "closed_hat",
+        "open_hat",
+        "clap",
+        "tom",
+        "rim",
+    ]
+    for index, imported in enumerate(project["tracks"]):
+        assert imported["instrument"] == "drum"
+        event = imported["params"]["events"][0]
+        assert event["beat"] == index / 4
+        assert event["duration"] == 0.25
+        assert event["velocity"] == pytest.approx(96 / 127)
+    output = tmp_path / "roundtrip.mid"
+    midi.export_file(project, output)
+    actual = [m.note for t in mido.MidiFile(output).tracks for m in t if m.type == "note_on"]
+    assert actual == [36, 38, 42, 46, 39, 45, 37]
+
+
+def test_import_mixed_channels_keeps_melody_and_drums_separate(tmp_path):
+    source = tmp_path / "mixed.mid"
+    mf = mido.MidiFile()
+    mf.tracks.append(
+        mido.MidiTrack(
+            [
+                mido.MetaMessage("track_name", name="Band"),
+                mido.Message("note_on", note=60, velocity=100),
+                mido.Message("note_on", note=36, velocity=64, channel=9, time=10),
+                mido.Message("note_off", note=60, time=110),
+                mido.Message("note_off", note=36, channel=9, time=10),
+            ]
+        )
+    )
+    mf.save(source)
+    legacy = midi.import_file(source)
+    assert len(legacy["tracks"]) == 1
+    assert legacy["tracks"][0]["params"]["events"][0]["notes"] == [60]
+    project = midi.import_file(source, instrument="bass", include_drums=True, quantize=False)
+    assert [t["instrument"] for t in project["tracks"]] == ["bass", "drum"]
+    event = project["tracks"][1]["params"]["events"][0]
+    assert event["beat"] == pytest.approx(10 / 480)
+    assert event["duration"] == 0.25
+    assert event["velocity"] == pytest.approx(64 / 127)
+    from groovescripting.synth import render
+
+    audio, sr, stems = projects.render_project(dict(project, sample_rate=8000), render)
+    assert sr == 8000 and audio.any() and len(stems) == 2
+
+
+def test_import_drums_cli_and_unknown_note_errors(tmp_path):
+    source = tmp_path / "drums.mid"
+    make_midi(source, channel=9)
+    output = tmp_path / "drums.json"
+    with pytest.raises(ValueError, match="60"):
+        midi.import_file(source, include_drums=True)
+    assert midi.cli(["import", str(source), "--include-drums", "-o", str(output)]) == 2
+    assert not output.exists()
+    mf = mido.MidiFile(source)
+    for message in mf.tracks[0]:
+        if message.type in ("note_on", "note_off"):
+            message.note = 36
+    mf.save(source)
+    assert midi.cli(["import", str(source), "--include-drums", "-o", str(output)]) == 0
+    assert json.loads(output.read_text())["tracks"][0]["instrument"] == "drum"
+    before = output.read_bytes()
+    assert midi.cli(["import", str(source), "--include-drums", "-o", str(output)]) == 1
+    assert output.read_bytes() == before
+
+
+def test_import_drums_flag_requires_boolean(tmp_path):
+    source = tmp_path / "source.mid"
+    make_midi(source)
+    with pytest.raises(ValueError, match="include_drums"):
+        midi.import_file(source, include_drums="yes")
+
+
+def test_import_drums_names_minimum_duration_and_unclosed_notes(tmp_path):
+    source = tmp_path / "names-drums.mid"
+    mf = mido.MidiFile()
+    for name in ["Kit", "Kit", "Kit kick"]:
+        mf.tracks.append(
+            mido.MidiTrack(
+                [
+                    mido.MetaMessage("track_name", name=name),
+                    mido.Message("note_on", note=36, velocity=100, channel=9),
+                    mido.Message("note_off", note=36, channel=9, time=1),
+                ]
+            )
+        )
+    mf.tracks.append(
+        mido.MidiTrack(
+            [
+                mido.Message("note_on", note=38, velocity=70, channel=9),
+            ]
+        )
+    )
+    mf.tracks.append(mido.MidiTrack([mido.MetaMessage("end_of_track", time=960)]))
+    mf.save(source)
+    project = midi.import_file(source, include_drums=True)
+    tracks = project["tracks"]
+    assert len(tracks) == len({t["name"] for t in tracks}) == 4
+    assert [t["params"]["events"][0]["duration"] for t in tracks] == [0.25, 0.25, 0.25, 2]
+    assert project == midi.import_file(source, include_drums=True)

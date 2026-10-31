@@ -5,7 +5,7 @@
 Add a ninth console command: `groovmidi`.
 
 ```
-groovmidi import INPUT.mid --output project.json [--instrument lead] [--subdivision 4] [--no-quantize] [--overwrite]
+groovmidi import INPUT.mid --output project.json [--instrument lead] [--subdivision 4] [--no-quantize] [--include-drums] [--overwrite]
 groovmidi export project.json --output arrangement.mid [--overwrite]
 ```
 
@@ -32,7 +32,10 @@ Version 1 imports Standard MIDI Files type 0 or 1 into one GrooveScripting proje
 - duplicate track names are disambiguated in file order with numbered suffixes, including collisions with generated fallback names
 - imported note events are stored as `params.events`
 - project bars are ceiling(max event end / beats-per-bar), minimum 1
-- channel 10 percussion import is deferred; a file containing only channel 10 notes fails with an actionable message in version 1
+- channel 10 percussion import is opt-in through `--include-drums` (API `include_drums=True`); without it, percussion is ignored and percussion-only input fails with an actionable message
+- enabled percussion import creates one drum track per source track and supported voice, with explicit events preserving timing/duration/velocity and a voice suffix on the source track name
+- the supported GM notes are kick36, snare38, closed_hat42, open_hat46, clap39, tom45 and rim37 (the export mapping); unsupported channel-10 notes fail explicitly when drum import is enabled
+- bass/lead selection applies only to melodic channels; drum import requires no new schema or dependencies
 
 ## Export
 

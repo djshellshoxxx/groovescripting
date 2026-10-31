@@ -42,9 +42,11 @@ def _beats_per_bar(numerator, denominator):
     return int(value)
 
 
-def import_file(path, instrument="lead", subdivision=4, quantize=True):
-    """Import melodic note tracks from a Standard MIDI File into a version-1 project."""
+def import_file(path, instrument="lead", subdivision=4, quantize=True, include_drums=False):
+    """Import note tracks from a Standard MIDI File into a version-1 project."""
 
+    if not isinstance(include_drums, bool):
+        raise ValueError("include_drums must be boolean")
     if instrument not in ("bass", "lead"):
         raise ValueError("MIDI import instrument must be bass or lead")
     if isinstance(subdivision, bool) or not isinstance(subdivision, int) or not 1 <= subdivision <= 64:
@@ -53,7 +55,9 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
     try:
         source = mido.MidiFile(path)
     except (EOFError, KeyError, IndexError, ValueError) as error:
-        raise ValueError(f"not a readable Standard MIDI File: {path} ({error or type(error).__name__})") from error
+        raise ValueError(
+            f"not a readable Standard MIDI File: {path} ({error or type(error).__name__})"
+        ) from error
     if source.type not in (0, 1):
         raise ValueError("MIDI import supports type 0 or 1; type 2 has independent track timelines")
     ticks_per_beat = source.ticks_per_beat
@@ -64,6 +68,7 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
     signatures = []
     tracks = []
     used_names = set()
+    drum_voices = {note: voice for voice, note in DRUM_NOTES.items()}
     percussion_notes = 0
     max_end = 0.0
 
@@ -90,29 +95,24 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
             if message.channel == 9:
                 if is_on:
                     percussion_notes += 1
-                continue
+                if not include_drums:
+                    continue
+                if message.note not in drum_voices:
+                    raise ValueError(f"unsupported General MIDI percussion note: {message.note}")
             key = (message.channel, message.note)
             if is_on:
                 active[key].append((absolute, message.velocity))
             elif active[key]:
                 start, velocity = active[key].popleft()
-                notes.append((start, max(start + 1, absolute), message.note, velocity))
+                notes.append((start, max(start + 1, absolute), message.note, velocity, message.channel))
 
         for (channel, note), queue in active.items():
-            del channel
             while queue:
                 start, velocity = queue.popleft()
-                notes.append((start, max(start + 1, file_end), note, velocity))
+                notes.append((start, max(start + 1, file_end), note, velocity, channel))
 
         if not notes:
             continue
-
-        base_name = name
-        suffix = 2
-        while name in used_names:
-            name = f"{base_name} ({suffix})"
-            suffix += 1
-        used_names.add(name)
 
         step = 1 / subdivision
 
@@ -122,35 +122,49 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
             return round(value * subdivision) / subdivision
 
         grouped = defaultdict(list)
-        for start_tick, end_tick, note, velocity in notes:
+        for start_tick, end_tick, note, velocity, channel in notes:
             start = q(start_tick / ticks_per_beat)
             duration = q((end_tick - start_tick) / ticks_per_beat)
             if quantize:
                 duration = max(step, duration)
             else:
                 duration = max(1 / ticks_per_beat, duration)
-            key = (start, duration, velocity)
+            voice = drum_voices[note] if channel == 9 else ""
+            key = (voice, start, duration, velocity)
             grouped[key].append(note)
             max_end = max(max_end, start + duration)
 
-        events = []
-        for (start, duration, velocity), chord in sorted(grouped.items()):
-            events.append(
-                {
+        voices = [""] + list(DRUM_NOTES)
+        for voice in voices:
+            events = []
+            for (event_voice, start, duration, velocity), chord in sorted(grouped.items()):
+                if event_voice != voice:
+                    continue
+                event = {
                     "beat": float(start),
                     "duration": float(duration),
-                    "notes": sorted(chord),
                     "velocity": float(velocity / 127),
                     "probability": 1,
                 }
+                if not voice:
+                    event["notes"] = sorted(chord)
+                # Percussion pitches with the same voice remain separate hits.
+                events.extend([dict(event) for _ in chord] if voice else [event])
+            if not events:
+                continue
+            base_name = f"{name} {voice}" if voice else name
+            track_name = base_name
+            suffix = 2
+            while track_name in used_names:
+                track_name = f"{base_name} ({suffix})"
+                suffix += 1
+            used_names.add(track_name)
+            params = {"events": events}
+            if voice:
+                params["voice"] = voice
+            tracks.append(
+                {"name": track_name, "instrument": "drum" if voice else instrument, "params": params}
             )
-        tracks.append(
-            {
-                "name": name,
-                "instrument": instrument,
-                "params": {"events": events},
-            }
-        )
 
     unique_tempos = sorted(set(tempos))
     if len(unique_tempos) > 1:
@@ -168,7 +182,7 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
 
     if not tracks:
         if percussion_notes:
-            raise ValueError("percussion-only MIDI import is not supported yet")
+            raise ValueError("percussion-only MIDI requires --include-drums")
         raise ValueError("MIDI file contains no melodic note events")
 
     project = {
@@ -287,7 +301,13 @@ def export_file(project, path, overwrite=False, ticks_per_beat=480):
                 overrides = section.get("tracks", {}).get(original["name"], {})
                 selected.append(
                     _resolved_track(
-                        original, overrides, project, sequence, len(selected), bars, section.get("variation", 0)
+                        original,
+                        overrides,
+                        project,
+                        sequence,
+                        len(selected),
+                        bars,
+                        section.get("variation", 0),
                     )
                 )
             solo = any(track.get("solo", False) and not track.get("mute", False) for track, _ in selected)
@@ -397,6 +417,9 @@ def parser():
     imp.add_argument("--instrument", choices=["bass", "lead"], default="lead")
     imp.add_argument("--subdivision", type=int, default=4)
     imp.add_argument("--no-quantize", action="store_true")
+    imp.add_argument(
+        "--include-drums", action="store_true", help="import supported channel-10 percussion voices"
+    )
     imp.add_argument("--overwrite", action="store_true")
 
     exp = sub.add_parser("export", help="convert a GrooveScripting project to MIDI")
@@ -421,6 +444,7 @@ def cli(argv=None):
                 instrument=args.instrument,
                 subdivision=args.subdivision,
                 quantize=not args.no_quantize,
+                include_drums=args.include_drums,
             )
             save_project(args.output, project, overwrite=args.overwrite)
         else:
