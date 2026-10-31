@@ -8,17 +8,22 @@ import copy
 import hashlib
 import json
 import math
-import os
-import tempfile
 from pathlib import Path
 
 from . import __version__, synth
+from .atomic import write_atomic
 from .music import beat_frame
 from .projects import expand, validate
 
 TRACE_SCHEMA_VERSION = 1
 DEFAULT_MAX_EVENTS = 100_000
-UNAVAILABLE = ["automation_values", "oscillator_phase", "effect_processing"]
+UNAVAILABLE = [
+    "automation_values",
+    "oscillator_phase",
+    "effect_processing",
+    "post_mix_audibility",
+    "post_synthesis_pitch",
+]
 
 
 def canonical(value):
@@ -202,7 +207,7 @@ def collect(project, seed=None, max_events=DEFAULT_MAX_EVENTS):
                         decisions=decisions,
                         resolved_parameters={
                             key: dict(value=params.get(key, 0), origin=_origin(project, t, key, step))
-                            for key in ("variation", "density", "humanize", "velocity_humanize")
+                            for key in ("variation", "density", "humanize", "velocity_humanize", "transpose")
                             if key in params
                         },
                     )
@@ -238,19 +243,13 @@ def collect(project, seed=None, max_events=DEFAULT_MAX_EVENTS):
 
 def write_jsonl(path, header, records, overwrite=False):
     """Atomically write a JSON Lines trace; no partial file remains on failure."""
-    destination = Path(path)
-    if destination.exists() and not overwrite:
-        raise FileExistsError(f"{destination} exists; use --overwrite")
-    handle, temporary = tempfile.mkstemp(prefix=".trace-", dir=destination.parent or ".")
-    try:
-        with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as out:
+
+    def write(temporary):
+        with temporary.open("w", encoding="utf-8", newline="\n") as out:
             for item in [header, *records]:
                 out.write(canonical(item) + "\n")
-        os.replace(temporary, destination)
-    except BaseException:
-        Path(temporary).unlink(missing_ok=True)
-        raise
-    return destination
+
+    return write_atomic(path, write, overwrite=overwrite)
 
 
 def read_jsonl(path):

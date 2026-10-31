@@ -11,12 +11,14 @@ from pathlib import Path
 
 
 def write_atomic(destination, writer, *, overwrite=False):
-    """Run writer once on a same-directory temporary path, then replace destination.
+    """Write a temporary file, then atomically publish it at destination.
 
     On any failure leave the previous destination unchanged and clean up temporary files.
+    Exclusive publication requires hard-link support on the destination filesystem;
+    unsupported filesystems fail safely rather than risking an existing output.
     """
     destination = Path(destination)
-    if destination.exists() and not overwrite:
+    if os.path.lexists(destination) and not overwrite:
         raise FileExistsError(str(destination))
     fd, temporary = tempfile.mkstemp(
         prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
@@ -25,9 +27,10 @@ def write_atomic(destination, writer, *, overwrite=False):
     temporary = Path(temporary)
     try:
         writer(temporary)
-        if destination.exists() and not overwrite:
-            raise FileExistsError(str(destination))
-        os.replace(temporary, destination)
+        if overwrite:
+            os.replace(temporary, destination)
+        else:
+            os.link(temporary, destination)
     finally:
         temporary.unlink(missing_ok=True)
     return destination
