@@ -52,7 +52,7 @@ Use `examples/arrangement.json` for a section based arrangement. Protect existin
 | `groovmerge` | Semantic three-way merge of project files |
 | `groovtheory` | Scales, chord symbols, Euclidean rhythms and progressions |
 
-Use `--variation` and `--density` on synth commands for seeded pattern mutation; drums also support `--ghost-notes` and `--fill-every`. Project tracks support gain, pan, cutoff and saturation automation lanes. `groovmidi import` converts melodic MIDI into a project and `groovmidi export` writes project arrangements as Standard MIDI Files.
+Use `--variation` and `--density` on synth commands for seeded pattern mutation; drums also support `--ghost-notes` and `--fill-every`. Project tracks support gain, pan, cutoff and saturation automation lanes. `groovmidi import` converts melodic MIDI into a project; add `--include-drums` to import the seven supported General MIDI percussion voices too and `groovmidi export` writes project arrangements as Standard MIDI Files.
 
 Note patterns accept chord symbols (`Cm7@3`, `F@2/1`) and drum patterns accept `euclid(5,8)`; see [spec/theory.md](spec/theory.md). Extra effects: `highpass`, `normalize`, `limiter`, `chorus`.
 
@@ -64,6 +64,7 @@ groovdrm --pattern "euclid(5,16)" --bars 2 --limit -o euclid.wav
 ```sh
 groovdrm --preset breakbeat --bars 4 --variation 0.3 --ghost-notes 0.08 --fill-every 4 --limit -o varied-break.wav
 groovmidi import phrase.mid --output phrase.json --instrument lead
+groovmidi import beat.mid --output beat.json --include-drums
 groovmidi export examples/arrangement.json --output arrangement.mid
 ```
 
@@ -164,3 +165,5 @@ Verification results are recorded by revision in [docs/verification.md](docs/ver
 ## Wiki
 
 Wiki source pages are in [docs/wiki/](docs/wiki/Home.md): developer guide, architecture summary and codebase map. `docs/reference.html` and `docs/installation.md` are the user references.
+
+Offline arrangements are capped at 10,000,000 output frames, including repeated sections and full tails; split longer work into smaller projects. Safe no-overwrite output requires a filesystem with hard-link support (for example NTFS, APFS or ext4); unsupported filesystems fail without replacing data.

@@ -76,5 +76,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.14'
+      - run: python -m pip install --upgrade "pip>=26.2,<27"
       - run: python -m pip install ".[audit]"
       - run: python -m pip_audit

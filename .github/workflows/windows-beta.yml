@@ -1,4 +1,4 @@
-name: Windows v0.3.1 beta 1
+name: Windows executable smoke build
 on:
   push:
     branches: [main]
@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: windows-beta-v0.3.1b1
+  group: windows-executable-smoke
   cancel-in-progress: false
 
 jobs:
@@ -51,7 +51,7 @@ jobs:
           "$exe" groovlint examples/arrangement.json --audio beta-smoke.wav
           "$exe" groovdebug examples/arrangement.json --format json --break 2 > /dev/null
           "$exe" groovmidi export examples/arrangement.json --output arrangement.mid
-          "$exe" groovmidi import arrangement.mid --output imported.json --instrument lead
+          "$exe" groovmidi import arrangement.mid --output imported.json --instrument lead --include-drums
           "$exe" groovmerge examples/arrangement.json examples/arrangement.json examples/arrangement.json --output merged.json
           "$exe" groovtime log examples/arrangement.json > /dev/null
           "$exe" groovplay --diagnose
@@ -68,32 +68,3 @@ jobs:
           name: groovescripting-windows-x64
           path: dist/groovescripting-windows-x64.exe
           if-no-files-found: error
-
-  publish-beta:
-    needs: windows-qa-and-build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: |
-          python -m pip install "build>=1,<2"
-          python -m build
-      - uses: actions/download-artifact@v4
-        with:
-          name: groovescripting-windows-x64
-          path: release-assets
-      - name: Publish validated Windows beta as a GitHub prerelease
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          tag=v0.3.1b1
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Refusing to overwrite an existing beta release: $tag" >&2
-            exit 1
-          fi
-          test -s release-assets/groovescripting-windows-x64.exe
-          gh release create "$tag" release-assets/groovescripting-windows-x64.exe dist/*             --target "$GITHUB_SHA"             --title "GrooveScripting v0.3.1 beta 1 (Windows)"             --notes-file .github/release-notes.md             --prerelease
