@@ -134,9 +134,10 @@ def _read_json(path):
         raise LintInputError(f"invalid JSON: {error}") from error
 
 
-def _ineffective(params, instrument, pointer):
+def _ineffective(params, instrument, pointer, context=None):
     """PRJ003 checks derived from the renderer contract in synth.render."""
     out = []
+    context = params if context is None else context
 
     def add(key, why):
         out.append(
@@ -150,24 +151,24 @@ def _ineffective(params, instrument, pointer):
         )
 
     if instrument == "drum":
-        if "resonance" in params and "cutoff" not in params:
+        if "resonance" in params and "cutoff" not in context:
             add("resonance", "drum resonance only applies when cutoff is set")
         return out
-    if "pulse_width" in params and params.get("waveform", "saw") not in ("pulse", "square"):
+    if "pulse_width" in params and context.get("waveform", "saw") not in ("pulse", "square"):
         add("pulse_width", "only pulse and square waveforms use pulse width")
-    if "lfo_rate" in params and not params.get("lfo_depth", 0):
+    if "lfo_rate" in params and not context.get("lfo_depth", 0):
         add("lfo_rate", "lfo_depth is 0")
-    if "vibrato_rate" in params and not params.get("vibrato_depth", 0):
+    if "vibrato_rate" in params and not context.get("vibrato_depth", 0):
         add("vibrato_rate", "vibrato_depth is 0")
     for key in ("filter_attack", "filter_decay", "filter_sustain", "filter_release"):
-        if key in params and not params.get("filter_amount", 0):
+        if key in params and not context.get("filter_amount", 0):
             add(key, "filter_amount is 0")
     if instrument == "lead":
-        if "arp_rate" in params and params.get("arp", "off") == "off":
+        if "arp_rate" in params and context.get("arp", "off") == "off":
             add("arp_rate", "arp is off")
-        if "unison_detune" in params and params.get("unison", 1) == 1:
+        if "unison_detune" in params and context.get("unison", 1) == 1:
             add("unison_detune", "unison is 1")
-        if "glide" in params and params.get("glide") and params.get("mode", "poly") != "mono":
+        if "glide" in params and context.get("glide") and context.get("mode", "poly") != "mono":
             add("glide", "glide applies only to monophonic voices")
     return out
 
@@ -198,7 +199,8 @@ def lint_preset(data):
     except ValueError as error:
         raise LintInputError(str(error)) from error
     params = data["params"]
-    return _ineffective(params, data["instrument"], "/params") + _boundaries(params, "/params"), {
+    context = presets.resolve(data["instrument"], params=params)
+    return _ineffective(params, data["instrument"], "/params", context) + _boundaries(params, "/params"), {
         "instrument": data["instrument"]
     }
 
@@ -212,10 +214,13 @@ def lint_project(data):
     sr = data.get("sample_rate", 44100)
     bpm = data.get("bpm", 120)
     total_frames = 0
+    ineffective_locations = []
     for i, track in enumerate(data["tracks"]):
         params = presets.resolve(track["instrument"], track.get("preset"), track.get("params", {}))
         explicit = dict(track.get("params", {}))
-        out += _ineffective(explicit, track["instrument"], f"/tracks/{i}/params")
+        candidates = _ineffective(explicit, track["instrument"], f"/tracks/{i}/params", params)
+        out += candidates
+        ineffective_locations.append({item["location"] for item in candidates})
         out += _boundaries(params, f"/tracks/{i}/params")
         if track.get("mute"):
             out.append(
@@ -227,7 +232,20 @@ def lint_project(data):
                 )
             )
     flagged = set()
+    effective_locations = set()
     for step in projects.expand(data):
+        for item in step["tracks"]:
+            index = item["index"]
+            if not ineffective_locations[index]:
+                continue
+            instrument = item["track"]["instrument"]
+            context = presets.resolve(instrument, params=item["params"])
+            explicit = data["tracks"][index].get("params", {})
+            still_ineffective = {
+                finding["location"]
+                for finding in _ineffective(explicit, instrument, f"/tracks/{index}/params", context)
+            }
+            effective_locations.update(ineffective_locations[index] - still_ineffective)
         total_frames += step["target"]
         frames = beat_frame(step["bars"] * data.get("beats", 4), bpm, sr)
         if frames > RENDER_FRAME_BUDGET and step["section_index"] not in flagged:
@@ -252,7 +270,8 @@ def lint_project(data):
         estimated_frames=total_frames,
         estimated_duration_seconds=round(total_frames / sr, 6),
     )
-    return out, metrics
+    # A global no-effect claim is valid only when every expanded section agrees.
+    return [item for item in out if item["location"] not in effective_locations], metrics
 
 
 def audio_metrics(path, block=ANALYSIS_BLOCK):
