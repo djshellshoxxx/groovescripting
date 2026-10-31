@@ -15,7 +15,9 @@ MIDI file I/O uses Mido. It does not require a realtime MIDI backend.
 
 Version 1 imports Standard MIDI Files type 0 or 1 into one GrooveScripting project.
 
+- type 2 files with independent track timelines and SMPTE time divisions are rejected; ticks-per-beat divisions must be positive
 - ticks are converted to beats using `ticks_per_beat`
+- zero tempo values are rejected as invalid input
 - the first tempo event sets project BPM, default 120
 - multiple distinct tempo values are rejected because project v1 has one global BPM
 - the first time signature sets beats-per-bar, default 4/4; non-quarter-note denominators are accepted only when they map cleanly to quarter-note beats
@@ -27,6 +29,7 @@ Version 1 imports Standard MIDI Files type 0 or 1 into one GrooveScripting proje
 - quantization defaults to the requested subdivision and rounds start/duration to subdivision steps; `--no-quantize` preserves beat fractions
 - velocity maps 1..127 to 0..1
 - each MIDI track containing notes becomes a GrooveScripting track; the selected instrument is bass or lead (default lead)
+- duplicate track names are disambiguated in file order with numbered suffixes, including collisions with generated fallback names
 - imported note events are stored as `params.events`
 - project bars are ceiling(max event end / beats-per-bar), minimum 1
 - channel 10 percussion import is deferred; a file containing only channel 10 notes fails with an actionable message in version 1

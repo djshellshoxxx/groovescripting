@@ -54,10 +54,16 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
         source = mido.MidiFile(path)
     except (EOFError, KeyError, IndexError, ValueError) as error:
         raise ValueError(f"not a readable Standard MIDI File: {path} ({error or type(error).__name__})") from error
+    if source.type not in (0, 1):
+        raise ValueError("MIDI import supports type 0 or 1; type 2 has independent track timelines")
     ticks_per_beat = source.ticks_per_beat
+    if ticks_per_beat <= 0:
+        raise ValueError("MIDI time division must use positive ticks per beat; SMPTE timing is unsupported")
+    file_end = max((sum(message.time for message in track) for track in source.tracks), default=0)
     tempos = []
     signatures = []
     tracks = []
+    used_names = set()
     percussion_notes = 0
     max_end = 0.0
 
@@ -66,12 +72,12 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
         name = getattr(track, "name", "") or f"MIDI Track {track_index + 1}"
         active = defaultdict(deque)
         notes = []
-        track_end = 0
         for message in track:
             absolute += message.time
-            track_end = absolute
             if message.is_meta:
                 if message.type == "set_tempo":
+                    if message.tempo <= 0:
+                        raise ValueError("MIDI tempo must be positive")
                     tempos.append(message.tempo)
                 elif message.type == "time_signature":
                     signatures.append((message.numerator, message.denominator))
@@ -96,10 +102,17 @@ def import_file(path, instrument="lead", subdivision=4, quantize=True):
             del channel
             while queue:
                 start, velocity = queue.popleft()
-                notes.append((start, max(start + 1, track_end), note, velocity))
+                notes.append((start, max(start + 1, file_end), note, velocity))
 
         if not notes:
             continue
+
+        base_name = name
+        suffix = 2
+        while name in used_names:
+            name = f"{base_name} ({suffix})"
+            suffix += 1
+        used_names.add(name)
 
         step = 1 / subdivision
 

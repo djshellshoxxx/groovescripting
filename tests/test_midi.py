@@ -118,3 +118,65 @@ def test_groovmidi_cli_import_export(tmp_path):
     output = tmp_path / "out.mid"
     assert midi.cli(["export", str(project_path), "--output", str(output)]) == 0
     assert output.exists()
+
+
+@pytest.mark.parametrize(
+    "file_type,division,tempo,match",
+    [
+        (2, 480, 500000, "type"),
+        (1, 0, 500000, "division"),
+        (1, -6360, 500000, "division"),
+        (1, 480, 0, "tempo"),
+    ],
+)
+def test_import_invalid_timing_is_input_error(tmp_path, file_type, division, tempo, match):
+    source = tmp_path / "invalid.mid"
+    make_midi(source, tempos=(tempo,))
+    mf = mido.MidiFile(source)
+    mf.type = file_type
+    mf.ticks_per_beat = division
+    mf.save(source)
+    with pytest.raises(ValueError, match=match):
+        midi.import_file(source)
+    output = tmp_path / "project.json"
+    assert midi.cli(["import", str(source), "-o", str(output)]) == 2
+    assert not output.exists()
+
+
+def test_import_assigns_unique_names_without_losing_notes(tmp_path):
+    source = tmp_path / "names.mid"
+    mf = mido.MidiFile()
+    for index, name in enumerate(["Piano", "Piano", "Piano (2)", "", "MIDI Track 4"]):
+        track = mido.MidiTrack(
+            [
+                mido.MetaMessage("track_name", name=name),
+                mido.Message("note_on", note=60 + index, velocity=100),
+                mido.Message("note_off", note=60 + index, time=480),
+            ]
+        )
+        mf.tracks.append(track)
+    mf.save(source)
+    project = midi.import_file(source)
+    names = [track["name"] for track in project["tracks"]]
+    assert len(set(names)) == 5
+    assert names[0] == "Piano"
+    assert [track["params"]["events"][0]["notes"] for track in project["tracks"]] == [
+        [60],
+        [61],
+        [62],
+        [63],
+        [64],
+    ]
+    assert midi.import_file(source) == project
+
+
+@pytest.mark.parametrize("conductor_first", [False, True])
+def test_import_closes_unclosed_note_at_file_end(tmp_path, conductor_first):
+    source = tmp_path / "sustain.mid"
+    mf = mido.MidiFile()
+    note = mido.MidiTrack([mido.Message("note_on", note=60, velocity=100)])
+    conductor = mido.MidiTrack([mido.MetaMessage("end_of_track", time=1920)])
+    mf.tracks.extend([conductor, note] if conductor_first else [note, conductor])
+    mf.save(source)
+    project = midi.import_file(source, quantize=False)
+    assert project["tracks"][0]["params"]["events"][0]["duration"] == 4
