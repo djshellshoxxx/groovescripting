@@ -104,7 +104,7 @@ def stop_reason(record, checks):
 
 def row(record):
     frame = record["timing"]["frame"]
-    notes = "+".join(f"{n:g}" for n in record["notes"]) or "-"
+    notes = "+".join(f"{float(n['hz']):g}Hz" if isinstance(n, dict) else f"{n:g}" for n in record["notes"]) or "-"
     state = (
         "yes"
         if record["accepted"]
