@@ -228,6 +228,12 @@ def render_project(project, render_fn, tail="cut", automation_fn=None):
     bpm = project.get("bpm", 120)
     sections = project.get("sections") or [dict(bars=project.get("bars", 1))]
     section_count = sum(s.get("repeat", 1) for s in sections)
+    total_beats = sum(
+        s.get("bars", project.get("bars", 1)) * s.get("repeat", 1) for s in sections
+    ) * project.get("beats", 4)
+    total_frames = beat_frame(total_beats, bpm, sr)
+    if not 1 <= total_frames <= 10_000_000:
+        raise ValueError("Arrangement must contain 1..10,000,000 frames; split longer work into chunks")
     chunks = []
     stem_chunks = {t["name"]: [] for t in project["tracks"]}
     for step in expand(project, tail):
@@ -266,6 +272,8 @@ def render_project(project, render_fn, tail="cut", automation_fn=None):
             rendered[t["name"]] = stem if tail == "full" and sequence == section_count - 1 else stem[:target]
         if tail == "full" and sequence == section_count - 1:
             target = max([target] + [len(stem) for stem in rendered.values()])
+            if total_frames - step["target"] + target > 10_000_000:
+                raise ValueError("Arrangement including tails exceeds 10,000,000 frames")
         chunk = np.zeros((target, channels))
         for name in stem_chunks:
             stem = rendered[name]
