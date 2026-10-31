@@ -394,6 +394,29 @@ def playback(args, data, sr):
     )
 
 
+def _stem_paths(stems, directory):
+    """Allocate portable distinct stem names before any audio files are written."""
+    bases = {
+        name: "".join(char if char.isalnum() or char in "_-" else "_" for char in name)
+        for name in stems
+    }
+    reserved = {base.casefold() for base in bases.values()}
+    used = set()
+    paths = []
+    for name, stem in stems.items():
+        base = bases[name]
+        safe = base
+        suffix = 2
+        if safe.casefold() in used:
+            safe = f"{base}_{suffix}"
+            while safe.casefold() in used or safe.casefold() in reserved:
+                suffix += 1
+                safe = f"{base}_{suffix}"
+        used.add(safe.casefold())
+        paths.append((directory / (safe + ".wav"), stem))
+    return paths
+
+
 def execute(tool, args, logger):
     from . import audio, effects
 
@@ -533,7 +556,7 @@ def execute(tool, args, logger):
                 values = getattr(args, flag)
                 track[key] = values[i] if i < len(values) else default
             tracks.append(track)
-        data, report = audio.mix(tracks, sr, args.channels or 2, normalize=args.normalize, limit=args.limit)
+        data, report = audio.mix(tracks, sr, args.channels or 2)
         logger.info("Mix report %s", report)
         solo = any(t.get("solo") and not t.get("mute") for t in tracks)
         for i, track in enumerate(tracks):
@@ -564,12 +587,13 @@ def execute(tool, args, logger):
             data, _ = audio.mix([{"data": data, "sample_rate": sr}], sr, args.channels)
     if fx_chain:
         data = effects.apply(data, sr, fx_chain, tail=args.tail)
-    if args.normalize and kind != "mix":
+    if args.normalize:
         peak = float(np.max(np.abs(data))) if data.size else 0
         if peak:
-            data = data * 0.95 / peak
-    if args.limit and kind != "mix":
-        data = np.clip(data, -0.98, 0.98)
+            data = data * (1.0 if kind == "mix" else 0.95) / peak
+    if args.limit:
+        ceiling = 1.0 if kind == "mix" else 0.98
+        data = np.clip(data, -ceiling, ceiling)
     if not np.isfinite(data).all():
         raise RuntimeError("Non-finite output rejected")
     peak = float(np.max(np.abs(data))) if data.size else 0
@@ -593,14 +617,22 @@ def execute(tool, args, logger):
         raise ValueError("FLAC does not support FLOAT; select PCM_16 or PCM_24")
     if args.play_only and getattr(args, "stems", None):
         raise ValueError("--stems writes files and cannot be combined with --play-only")
+    stem_paths = []
+    if getattr(args, "stems", None):
+        directory = Path(args.stems)
+        stem_paths = _stem_paths(stems, directory)
+        master_path = str(Path(output).resolve()).casefold()
+        for path, _ in stem_paths:
+            if str(path.resolve()).casefold() == master_path:
+                raise ValueError("master output must not share a filename with a stem")
+            if not args.overwrite and path.exists():
+                raise FileExistsError(str(path))
     if not args.play_only:
         audio.write(output, data, sr, overwrite=args.overwrite, format=fmt, subtype=args.subtype)
     if getattr(args, "stems", None):
-        directory = Path(args.stems)
         directory.mkdir(parents=True, exist_ok=True)
-        for name, stem in stems.items():
-            safe = "".join(char if char.isalnum() or char in "_-" else "_" for char in name)
-            audio.write(directory / (safe + ".wav"), stem, sr, overwrite=args.overwrite)
+        for path, stem in stem_paths:
+            audio.write(path, stem, sr, overwrite=args.overwrite)
     if args.play or args.play_only:
         playback(args, np.clip(data, -1, 1) if clipping else data, sr)
     elif args.system_volume is not None or args.system_unmute:
