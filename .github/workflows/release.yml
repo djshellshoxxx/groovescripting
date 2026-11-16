@@ -73,7 +73,7 @@ jobs:
           "$exe" groovdrm --preset breakbeat --bars 1 --limit --output drums.wav
           "$exe" groovfx drums.wav --effect '{"type":"gain","db":-3}' --output drums-fx.wav
           "$exe" groovmidi export examples/arrangement.json --output arrangement.mid
-          "$exe" groovmidi import arrangement.mid --output imported.json --instrument lead
+          "$exe" groovmidi import arrangement.mid --output imported.json --instrument lead --include-drums
           "$exe" groovmerge examples/arrangement.json examples/arrangement.json examples/arrangement.json --output merged.json
           "$exe" groovtime log examples/arrangement.json > /dev/null
           "$exe" groovtheory progression C I vi IV V

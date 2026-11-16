@@ -9,7 +9,7 @@ from scipy.signal import lfilter
 from . import presets
 from . import variation as event_variation
 from .music import beat_frame, frequency, note_value, parse_pattern
-from .theory import SCALES
+from .theory import SCALES, expand_euclid
 
 DRUMS = ("kick", "snare", "closed_hat", "open_hat", "clap", "tom", "rim")
 
@@ -79,8 +79,13 @@ def lowpass(signal, sr, cutoff, resonance=0):
 def _events(o, kind):
     events = o.get("events")
     if events is None:
+        pattern = str(
+            o.get("pattern", "x...x...x...x..." if kind == "drum" else "C2 . . . C2 . G2 .")
+        ).strip()
+        if kind == "drum":
+            pattern = expand_euclid(pattern) or pattern
         events = parse_pattern(
-            o.get("pattern", "x...x...x...x..." if kind == "drum" else "C2 . . . C2 . G2 ."),
+            pattern,
             kind,
             int(o.get("subdivision", 4)),
         )
@@ -123,7 +128,6 @@ def _events(o, kind):
                     if frequency(parsed) >= int(o.get("sample_rate", 44100)) / 2:
                         raise ValueError("Event frequency must be below Nyquist")
         return [dict(e) for e in events]
-    pattern = str(o.get("pattern", "x...x...x...x..." if kind == "drum" else "C2 . . . C2 . G2 .")).strip()
     tokens = (
         len(pattern)
         if kind == "drum" and re.fullmatch(r"[xX.\-]+", pattern)
@@ -434,7 +438,10 @@ def render(instrument, options=None, trace=None):
                         trace,
                         e,
                         voice=instrument,
-                        notes=list(e.get("notes") or []),
+                        notes=[
+                            note_value(note) if not isinstance(note, dict) else note
+                            for note in e.get("notes") or []
+                        ],
                         velocity_in=before,
                         velocity=e["velocity"],
                         roll=float(roll),

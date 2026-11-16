@@ -365,11 +365,14 @@ def test_semantic_merge_combines_dimensions_and_reports_conflicts(tmp_path):
     )
 
 
-@pytest.mark.parametrize("track_name,segment", [
-    ("Bass/one", "Bass~1one"),
-    ("Bass~one", "Bass~0one"),
-    ("Bass/~one", "Bass~1~0one"),
-])
+@pytest.mark.parametrize(
+    "track_name,segment",
+    [
+        ("Bass/one", "Bass~1one"),
+        ("Bass~one", "Bass~0one"),
+        ("Bass/~one", "Bass~1~0one"),
+    ],
+)
 @pytest.mark.parametrize("section_name", ["B/section", "B~section", "B/~section"])
 @pytest.mark.parametrize("source_kind", ["pattern", "params_pattern", "events", "drum_patterns"])
 def test_section_provenance_pointer_escapes_track_name(track_name, segment, section_name, source_kind):
@@ -430,6 +433,20 @@ def test_drum_map_provenance_precedes_unused_section_pattern():
     p = project()
     p["sections"][1]["tracks"]["Drums"] = {"pattern": "."}
     _, records = trace.collect(p)
-    selected = [r for r in records if r["track"] == "Drums" and r["source"]["section"] == "B" and r["voice"] == "kick"]
+    selected = [
+        r for r in records if r["track"] == "Drums" and r["source"]["section"] == "B" and r["voice"] == "kick"
+    ]
     assert selected
     assert {r["source"]["pointer"] for r in selected} == {"/tracks/0/params/drum_patterns/kick"}
+
+
+def test_trace_discloses_post_scheduler_limits():
+    p = project()
+    p["tracks"][1]["params"] = {"transpose": 12}
+    p["tracks"][1]["trim"] = 0
+    header, records = trace.collect(p)
+    assert "post_mix_audibility" in header["unavailable"]
+    assert "post_synthesis_pitch" in header["unavailable"]
+    selected = [r for r in records if r["track"] == "Bass"]
+    assert selected
+    assert all(r["resolved_parameters"]["transpose"]["value"] == 12 for r in selected)

@@ -21,3 +21,5 @@ Humanization is supplied as deterministic seed and params to the renderer; timin
 ## Arrangement tail policy
 
 render_project(project, render_fn, tail='cut') accepts cut/full/wrap. cut preserves the global declared timeline; full retains tails only beyond the final section; wrap folds each section's tails into that section. Track/preset humanization remains when a global value is omitted. Section boundaries are cumulative absolute beats rounded once, avoiding section-by-section drift. Stems include this instrument policy, but are pre-master: final ordered effects, normalization and limiting remain on the mixdown.
+
+Arrangement rendering rejects outputs beyond 10,000,000 frames before PCM allocation, including fully muted tracks and repeated sections. Final full tails also count toward this output budget; split longer work into smaller projects.

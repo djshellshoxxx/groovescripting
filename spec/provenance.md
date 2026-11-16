@@ -22,7 +22,7 @@ Source pointers follow RFC 6901 (`~` → `~0`, `/` → `~1` in each token). Sect
 
 Decision kinds: `variation_insert`, `variation_shift`, `velocity_humanize`, `probability` (roll, threshold, pass/fail), `swing`, `humanize` (frames), `note_resolution` (scale/arpeggio), `voice_limit` (truncation frame), `window` (dropped outside render window).
 
-Not captured (always listed in the header `unavailable`): automation values, oscillator phase, effect processing.
+Not captured (always listed in the header `unavailable`): automation values, oscillator phase, effect processing, post-mix audibility and post-synthesis pitch. `accepted` describes the instrument scheduler before track trim/placement and mix processing; it does not guarantee an audible sample in the final output. `notes` records scheduling/scale resolution before oscillator transposition, which is exposed separately in resolved parameters when configured. Track placement may produce frames outside the final output window.
 
 ## Fingerprint
 
